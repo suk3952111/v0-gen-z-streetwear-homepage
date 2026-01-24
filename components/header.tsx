@@ -42,10 +42,10 @@ export function Header({ language, onLanguageChange, onAuthClick }: HeaderProps)
         </Link>
         
         <nav className="hidden md:flex items-center gap-8">
-          <Link href="#" className="text-white text-lg font-bold uppercase tracking-wider hover:text-[#CCFF00] transition-colors border-b-2 border-transparent hover:border-[#CCFF00]">
+          <Link href="/shop" className="text-white text-lg font-bold uppercase tracking-wider hover:text-[#CCFF00] transition-colors border-b-2 border-transparent hover:border-[#CCFF00]">
             {navItems[language].drops}
           </Link>
-          <Link href="#" className="text-white text-lg font-bold uppercase tracking-wider hover:text-[#CCFF00] transition-colors border-b-2 border-transparent hover:border-[#CCFF00]">
+          <Link href="/shop" className="text-white text-lg font-bold uppercase tracking-wider hover:text-[#CCFF00] transition-colors border-b-2 border-transparent hover:border-[#CCFF00]">
             {navItems[language].archive}
           </Link>
           <Link href="#" className="text-white text-lg font-bold uppercase tracking-wider hover:text-[#CCFF00] transition-colors border-b-2 border-transparent hover:border-[#CCFF00]">
@@ -114,10 +114,10 @@ export function Header({ language, onLanguageChange, onAuthClick }: HeaderProps)
       {/* Mobile menu */}
       {menuOpen && (
         <nav className="md:hidden border-t-2 border-[#CCFF00] bg-[#0a0a0a]">
-          <Link href="#" className="block px-4 py-4 text-white text-xl font-bold uppercase border-b-2 border-[#1a1a1a] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
+          <Link href="/shop" className="block px-4 py-4 text-white text-xl font-bold uppercase border-b-2 border-[#1a1a1a] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
             {navItems[language].drops}
           </Link>
-          <Link href="#" className="block px-4 py-4 text-white text-xl font-bold uppercase border-b-2 border-[#1a1a1a] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
+          <Link href="/shop" className="block px-4 py-4 text-white text-xl font-bold uppercase border-b-2 border-[#1a1a1a] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
             {navItems[language].archive}
           </Link>
           <Link href="#" className="block px-4 py-4 text-white text-xl font-bold uppercase hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
