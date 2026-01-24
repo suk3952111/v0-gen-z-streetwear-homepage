@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { AuthModal } from "@/components/auth-modal"
 import { Eye, EyeOff } from "lucide-react"
 
 type Language = "EN" | "KR"
@@ -43,12 +44,17 @@ export default function LoginPage() {
   const [language, setLanguage] = useState<Language>("EN")
   const [showPassword, setShowPassword] = useState(false)
   const [isGoogleHovered, setIsGoogleHovered] = useState(false)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
   const t = content[language]
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
-      <Header language={language} onLanguageChange={setLanguage} />
+      <Header 
+        language={language} 
+        onLanguageChange={setLanguage} 
+        onAuthClick={() => setIsAuthModalOpen(true)}
+      />
 
       <section className="relative min-h-screen flex items-center justify-center pt-20 px-4">
         {/* Grainy texture overlay */}
@@ -208,6 +214,12 @@ export default function LoginPage() {
       </section>
 
       <Footer language={language} />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        language={language}
+      />
 
       {/* Glitch animation styles */}
       <style jsx>{`

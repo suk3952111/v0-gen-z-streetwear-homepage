@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { AuthModal } from "@/components/auth-modal"
 import { Minus, Plus, X, Sparkles } from "lucide-react"
 
 type Language = "EN" | "KR"
@@ -92,6 +93,7 @@ const vibeCategories = [
 export default function CartPage() {
   const [language, setLanguage] = useState<Language>("EN")
   const [items, setItems] = useState(cartItems)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
   const t = content[language]
 
@@ -125,7 +127,11 @@ export default function CartPage() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
-      <Header language={language} onLanguageChange={setLanguage} />
+      <Header 
+        language={language} 
+        onLanguageChange={setLanguage} 
+        onAuthClick={() => setIsAuthModalOpen(true)}
+      />
 
       <section className="relative pt-24 pb-20 px-4 md:px-8">
         {/* Grainy texture overlay */}
@@ -366,6 +372,11 @@ export default function CartPage() {
       </section>
 
       <Footer language={language} />
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        language={language}
+      />
     </main>
   )
 }

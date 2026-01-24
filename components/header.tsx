@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ShoppingBag, Menu, X } from "lucide-react"
+import { ShoppingBag, Menu, X, User } from "lucide-react"
 import { useState, createContext, useContext } from "react"
 
 type Language = "EN" | "KR"
@@ -20,7 +20,13 @@ export function useLanguage() {
   return useContext(LanguageContext)
 }
 
-export function Header({ language, onLanguageChange }: { language: Language; onLanguageChange: (lang: Language) => void }) {
+interface HeaderProps {
+  language: Language
+  onLanguageChange: (lang: Language) => void
+  onAuthClick?: () => void
+}
+
+export function Header({ language, onLanguageChange, onAuthClick }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const navItems = {
@@ -74,15 +80,26 @@ export function Header({ language, onLanguageChange }: { language: Language; onL
             </button>
           </div>
 
+          {/* User Icon */}
           <button 
-            className="relative p-2 border-2 border-[#CCFF00] bg-[#0a0a0a] text-[#CCFF00] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors"
-            aria-label="Shopping bag"
+            onClick={onAuthClick}
+            className="p-2 border-2 border-[#CCFF00] bg-[#0a0a0a] text-[#CCFF00] transition-all hover:bg-[#CCFF00] hover:text-[#0a0a0a] hover:shadow-[0_0_15px_#CCFF00]"
+            aria-label="Login or Sign up"
+          >
+            <User className="w-6 h-6" />
+          </button>
+
+          {/* Cart Icon */}
+          <Link 
+            href="/cart"
+            className="relative p-2 border-2 border-[#CCFF00] bg-[#0a0a0a] text-[#CCFF00] transition-all hover:bg-[#CCFF00] hover:text-[#0a0a0a] hover:shadow-[0_0_15px_#CCFF00]"
+            aria-label="Shopping cart"
           >
             <ShoppingBag className="w-6 h-6" />
             <span className="absolute -top-2 -right-2 w-5 h-5 bg-[#CCFF00] text-[#0a0a0a] text-xs font-bold flex items-center justify-center">
               3
             </span>
-          </button>
+          </Link>
           
           <button 
             className="md:hidden p-2 border-2 border-[#CCFF00] bg-[#0a0a0a] text-[#CCFF00]"
