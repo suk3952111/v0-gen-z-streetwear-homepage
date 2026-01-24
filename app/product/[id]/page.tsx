@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { ProductDetail } from "@/components/product-detail"
 import { Footer } from "@/components/footer"
@@ -11,6 +12,9 @@ import { AuthModal } from "@/components/auth-modal"
 type Language = "EN" | "KR"
 
 export default function ProductPage() {
+  const params = useParams()
+  const productId = params.id as string
+  
   const [language, setLanguage] = useState<Language>("EN")
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
@@ -22,7 +26,7 @@ export default function ProductPage() {
         onLanguageChange={setLanguage} 
         onAuthClick={() => setIsAuthModalOpen(true)}
       />
-      <ProductDetail language={language} />
+      <ProductDetail language={language} productId={productId} />
       <Footer language={language} />
       <AIStyleFinder language={language} onClick={() => setIsSearchModalOpen(true)} />
       <AIVisualSearchModal

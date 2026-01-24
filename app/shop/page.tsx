@@ -200,6 +200,7 @@ export default function ShopPage() {
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
+                  id={product.id}
                   name={product.name}
                   price={language === "KR" ? product.price : product.priceUSD}
                   aiMatch={product.aiMatch}

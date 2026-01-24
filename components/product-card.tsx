@@ -1,9 +1,11 @@
 "use client"
 
 import Image from "next/image"
+import Link from "next/link"
 import { Sparkles } from "lucide-react"
 
 interface ProductCardProps {
+  id: string
   name: string
   price: number
   aiMatch: number
@@ -13,7 +15,7 @@ interface ProductCardProps {
   showMatchBadge?: boolean
 }
 
-export function ProductCard({ name, price, aiMatch, image, category, currency = "USD", showMatchBadge = false }: ProductCardProps) {
+export function ProductCard({ id, name, price, aiMatch, image, category, currency = "USD", showMatchBadge = false }: ProductCardProps) {
   const formatPrice = (p: number, curr: string) => {
     if (curr === "KRW") {
       return `${p.toLocaleString()}원`
@@ -21,7 +23,7 @@ export function ProductCard({ name, price, aiMatch, image, category, currency = 
     return `$${p}`
   }
   return (
-    <div className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00]">
+    <Link href={`/product/${id}`} className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00] block">
       {/* AI Match Badge - Only shown when showMatchBadge is true */}
       {showMatchBadge && (
         <div 
@@ -63,6 +65,6 @@ export function ProductCard({ name, price, aiMatch, image, category, currency = 
           </button>
         </div>
       </div>
-    </div>
+    </Link>
   )
 }

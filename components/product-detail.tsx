@@ -1,72 +1,15 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import Link from "next/link"
+import { useState, useMemo } from "react"
 import { Sparkles, ChevronLeft, Minus, Plus } from "lucide-react"
-
-type Language = "EN" | "KR"
-
-interface SimilarProduct {
-  name: string
-  price: number
-  priceUSD: number
-  aiMatch: number
-  image: string
-}
+import { products, type Language, type Product } from "@/lib/products"
 
 interface ProductDetailProps {
   language: Language
+  productId: string
 }
-
-const mainProduct = {
-  name: "사이버 후디 3000",
-  price: 189000,
-  priceUSD: 189,
-  image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=800&h=1000&fit=crop",
-  category: { EN: "HOODIES", KR: "후드" },
-  description: {
-    EN: "Oversized cyber-inspired hoodie with reflective details. Premium heavyweight cotton blend. The future of streetwear is here.",
-    KR: "리플렉티브 디테일이 돋보이는 오버사이즈 사이버 후디. 프리미엄 헤비웨이트 코튼 블렌드. 스트릿웨어의 미래가 여기에."
-  }
-}
-
-const similarProducts: SimilarProduct[] = [
-  {
-    name: "VOID PUFFER JACKET",
-    price: 299000,
-    priceUSD: 299,
-    aiMatch: 94,
-    image: "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400&h=400&fit=crop"
-  },
-  {
-    name: "STATIC CREWNECK",
-    price: 95000,
-    priceUSD: 95,
-    aiMatch: 91,
-    image: "https://images.unsplash.com/photo-1578681994506-b8f463449011?w=400&h=400&fit=crop"
-  },
-  {
-    name: "PIXEL VARSITY JACKET",
-    price: 265000,
-    priceUSD: 265,
-    aiMatch: 89,
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop"
-  },
-  {
-    name: "네온 오버사이즈 티",
-    price: 79000,
-    priceUSD: 79,
-    aiMatch: 87,
-    image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=400&fit=crop"
-  },
-  {
-    name: "매트릭스 트랙팬츠",
-    price: 120000,
-    priceUSD: 120,
-    aiMatch: 85,
-    image: "https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=400&h=400&fit=crop"
-  }
-]
 
 const sizes = ["XS", "S", "M", "L", "XL", "XXL"]
 
@@ -77,7 +20,9 @@ const content = {
     sizeGuide: "SIZE GUIDE",
     quantity: "QTY",
     addToVibe: "ADD TO VIBE",
-    aiVision: "AI VISION: SIMILAR VIBES"
+    aiVision: "AI VISION: SIMILAR VIBES",
+    notFound: "PRODUCT NOT FOUND",
+    goBack: "GO BACK TO SHOP"
   },
   KR: {
     back: "뒤로",
@@ -85,13 +30,57 @@ const content = {
     sizeGuide: "사이즈 가이드",
     quantity: "수량",
     addToVibe: "장바구니 담기",
-    aiVision: "AI 추천: 비슷한 바이브"
+    aiVision: "AI 추천: 비슷한 바이브",
+    notFound: "상품을 찾을 수 없습니다",
+    goBack: "쇼핑 페이지로 돌아가기"
   }
 }
 
-export function ProductDetail({ language }: ProductDetailProps) {
+// Product descriptions by category
+const descriptions: Record<string, { EN: string; KR: string }> = {
+  HOODIES: {
+    EN: "Premium heavyweight cotton blend hoodie with oversized fit. Cyber-inspired design with reflective details. The future of streetwear is here.",
+    KR: "오버사이즈 핏의 프리미엄 헤비웨이트 코튼 블렌드 후디. 리플렉티브 디테일이 돋보이는 사이버 감성 디자인. 스트릿웨어의 미래가 여기에."
+  },
+  OUTER: {
+    EN: "Technical outerwear crafted with cutting-edge materials. Weather-resistant construction meets urban style. Built for the streets, designed for the future.",
+    KR: "최첨단 소재로 제작된 테크니컬 아우터. 날씨에 강한 구조와 도시적 스타일의 만남. 거리를 위해 만들어지고, 미래를 위해 디자인되었습니다."
+  },
+  TOPS: {
+    EN: "Oversized streetwear essential with bold graphics and premium construction. Soft touch fabric meets hard-hitting design. Your new go-to piece.",
+    KR: "대담한 그래픽과 프리미엄 구조의 오버사이즈 스트릿웨어 에센셜. 부드러운 터치의 원단과 강렬한 디자인의 만남. 새로운 필수 아이템."
+  },
+  BOTTOMS: {
+    EN: "Utility-focused bottoms with multiple pockets and adjustable features. Technical fabric meets street style. Move freely, look sharp.",
+    KR: "다수의 포켓과 조절 가능한 기능을 갖춘 유틸리티 포커스 하의. 테크니컬 원단과 스트릿 스타일의 만남. 자유롭게 움직이고, 날카롭게 보이세요."
+  },
+  ACC: {
+    EN: "Statement accessories to complete your cyber-street look. Functional design meets bold aesthetics. The finishing touch your fit needs.",
+    KR: "사이버-스트릿 룩을 완성하는 스테이트먼트 악세서리. 기능적 디자인과 대담한 미학의 만남. 당신의 핏에 필요한 마무리 터치."
+  }
+}
+
+export function ProductDetail({ language, productId }: ProductDetailProps) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
+
+  // Find the product by ID
+  const product = useMemo(() => {
+    return products.find(p => p.id === productId)
+  }, [productId])
+
+  // Get similar products based on shared tags
+  const similarProducts = useMemo(() => {
+    if (!product) return []
+    return products
+      .filter(p => p.id !== productId)
+      .map(p => ({
+        ...p,
+        matchScore: p.tags.filter(tag => product.tags.includes(tag)).length
+      }))
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 5)
+  }, [product, productId])
 
   const formatPrice = (p: number, curr: string) => {
     if (curr === "KRW") {
@@ -100,14 +89,45 @@ export function ProductDetail({ language }: ProductDetailProps) {
     return `$${p}`
   }
 
+  const t = content[language]
+
+  // Product not found state
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] pt-20 flex flex-col items-center justify-center">
+        <h1 className="text-4xl md:text-6xl font-bold text-white uppercase tracking-tighter mb-4">
+          {t.notFound}
+        </h1>
+        <Link 
+          href="/shop"
+          className="px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] text-lg font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors"
+        >
+          {t.goBack}
+        </Link>
+      </div>
+    )
+  }
+
+  // Get category key for description
+  const categoryKey = product.category.EN === "HOODIES" ? "HOODIES" 
+    : product.category.EN === "OUTER" ? "OUTER"
+    : product.category.EN === "TOPS" ? "TOPS"
+    : product.category.EN === "BOTTOMS" ? "BOTTOMS"
+    : "ACC"
+
+  const description = descriptions[categoryKey]
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] pt-20">
       {/* Back Button */}
       <div className="px-4 md:px-8 py-4 max-w-7xl mx-auto">
-        <button className="flex items-center gap-2 text-[#CCFF00] font-bold uppercase tracking-wider hover:text-white transition-colors">
+        <Link 
+          href="/shop"
+          className="flex items-center gap-2 text-[#CCFF00] font-bold uppercase tracking-wider hover:text-white transition-colors"
+        >
           <ChevronLeft className="w-5 h-5" />
-          {content[language].back}
-        </button>
+          {t.back}
+        </Link>
       </div>
 
       {/* Main Product Section */}
@@ -125,12 +145,24 @@ export function ProductDetail({ language }: ProductDetailProps) {
               />
               
               <Image
-                src={mainProduct.image || "/placeholder.svg"}
-                alt={mainProduct.name}
+                src={product.image.replace('w=600&h=600', 'w=800&h=1000') || "/placeholder.svg"}
+                alt={product.name}
                 fill
                 className="object-cover"
                 priority
               />
+
+              {/* Tags on image */}
+              <div className="absolute bottom-4 left-4 z-20 flex flex-wrap gap-2">
+                {product.tags.map(tag => (
+                  <span 
+                    key={tag}
+                    className="px-2 py-1 text-xs font-bold uppercase bg-[#0a0a0a]/80 text-[#CCFF00] border border-[#CCFF00]"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -138,32 +170,32 @@ export function ProductDetail({ language }: ProductDetailProps) {
           <div className="w-full lg:w-1/2 lg:pl-8 lg:border-l-4 lg:border-[#CCFF00]">
             {/* Category */}
             <p className="text-[#CCFF00] text-sm font-bold uppercase tracking-[0.3em] mb-2">
-              {mainProduct.category[language]}
+              {product.category[language]}
             </p>
 
             {/* Product Name */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white uppercase tracking-tighter mb-4">
-              {mainProduct.name}
+              {product.name}
             </h1>
 
             {/* Price */}
             <p className="text-4xl md:text-5xl font-bold text-[#CCFF00] mb-6">
-              {formatPrice(language === "KR" ? mainProduct.price : mainProduct.priceUSD, language === "KR" ? "KRW" : "USD")}
+              {formatPrice(language === "KR" ? product.price : product.priceUSD, language === "KR" ? "KRW" : "USD")}
             </p>
 
             {/* Description */}
             <p className="text-white text-lg leading-relaxed mb-8 border-l-4 border-[#CCFF00] pl-4">
-              {mainProduct.description[language]}
+              {description[language]}
             </p>
 
             {/* Size Selection */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-white text-lg font-bold uppercase tracking-wider">
-                  {content[language].selectSize}
+                  {t.selectSize}
                 </p>
                 <button className="text-[#CCFF00] text-sm font-bold uppercase tracking-wider hover:text-white transition-colors underline underline-offset-4">
-                  {content[language].sizeGuide}
+                  {t.sizeGuide}
                 </button>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -186,7 +218,7 @@ export function ProductDetail({ language }: ProductDetailProps) {
             {/* Quantity */}
             <div className="mb-8">
               <p className="text-white text-lg font-bold uppercase tracking-wider mb-4">
-                {content[language].quantity}
+                {t.quantity}
               </p>
               <div className="flex items-center border-4 border-[#CCFF00] w-fit">
                 <button
@@ -218,7 +250,7 @@ export function ProductDetail({ language }: ProductDetailProps) {
                 cursor: selectedSize ? "pointer" : "not-allowed"
               }}
             >
-              {content[language].addToVibe}
+              {t.addToVibe}
             </button>
           </div>
         </div>
@@ -231,7 +263,7 @@ export function ProductDetail({ language }: ProductDetailProps) {
             <div className="flex items-center gap-3">
               <Sparkles className="w-8 h-8 text-[#CCFF00]" />
               <h2 className="text-3xl md:text-5xl font-bold text-white uppercase tracking-tighter">
-                {content[language].aiVision}
+                {t.aiVision}
               </h2>
             </div>
           </div>
@@ -240,25 +272,26 @@ export function ProductDetail({ language }: ProductDetailProps) {
         {/* Horizontal Scroll */}
         <div className="overflow-x-auto scrollbar-hide">
           <div className="flex gap-6 px-4 md:px-8 pb-4" style={{ width: "max-content" }}>
-            {similarProducts.map((product, index) => (
-              <div
-                key={index}
-                className="relative w-64 sm:w-72 flex-shrink-0 border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00] group cursor-pointer"
+            {similarProducts.map((similarProduct) => (
+              <Link
+                key={similarProduct.id}
+                href={`/product/${similarProduct.id}`}
+                className="relative w-64 sm:w-72 flex-shrink-0 border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00] group cursor-pointer block"
               >
-                {/* AI Match Badge - Shown in similar vibes section */}
+                {/* AI Match Badge */}
                 <div 
                   className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]"
                   style={{ animation: 'badge-glow 2s ease-in-out infinite' }}
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span className="text-sm font-bold">{product.aiMatch}%</span>
+                  <span className="text-sm font-bold">{similarProduct.aiMatch}%</span>
                 </div>
 
                 {/* Product Image */}
                 <div className="relative aspect-square overflow-hidden bg-[#1a1a1a]">
                   <Image
-                    src={product.image || "/placeholder.svg"}
-                    alt={product.name}
+                    src={similarProduct.image || "/placeholder.svg"}
+                    alt={similarProduct.name}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                   />
@@ -268,13 +301,13 @@ export function ProductDetail({ language }: ProductDetailProps) {
                 {/* Product Info */}
                 <div className="p-4 border-t-4 border-[#CCFF00]">
                   <h3 className="text-white text-lg font-bold uppercase tracking-tight mb-2 truncate">
-                    {product.name}
+                    {similarProduct.name}
                   </h3>
                   <p className="text-[#CCFF00] text-xl font-bold">
-                    {formatPrice(language === "KR" ? product.price : product.priceUSD, language === "KR" ? "KRW" : "USD")}
+                    {formatPrice(language === "KR" ? similarProduct.price : similarProduct.priceUSD, language === "KR" ? "KRW" : "USD")}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

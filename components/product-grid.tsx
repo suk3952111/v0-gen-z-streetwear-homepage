@@ -37,9 +37,10 @@ export function ProductGrid({ language }: { language: Language }) {
 
       {/* Product Grid */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {products.map((product, index) => (
+        {products.map((product) => (
           <ProductCard 
-            key={index} 
+            key={product.id} 
+            id={product.id}
             name={product.name}
             price={language === "KR" ? product.price : product.priceUSD}
             aiMatch={product.aiMatch}
