@@ -6,12 +6,14 @@ import { HeroSection } from "@/components/hero-section"
 import { MarqueeBanner } from "@/components/marquee-banner"
 import { ProductGrid } from "@/components/product-grid"
 import { AIStyleFinder } from "@/components/ai-style-finder"
+import { AIVisualSearchModal } from "@/components/ai-visual-search-modal"
 import { Footer } from "@/components/footer"
 
 type Language = "EN" | "KR"
 
 export default function Home() {
   const [language, setLanguage] = useState<Language>("EN")
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
@@ -20,7 +22,12 @@ export default function Home() {
       <MarqueeBanner language={language} />
       <ProductGrid language={language} />
       <Footer language={language} />
-      <AIStyleFinder language={language} />
+      <AIStyleFinder language={language} onClick={() => setIsModalOpen(true)} />
+      <AIVisualSearchModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        language={language}
+      />
     </main>
   )
 }

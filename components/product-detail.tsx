@@ -2,8 +2,7 @@
 
 import Image from "next/image"
 import { useState } from "react"
-import { Sparkles, Scan, ChevronLeft, Minus, Plus } from "lucide-react"
-import { AIVisualSearchModal } from "./ai-visual-search-modal"
+import { Sparkles, ChevronLeft, Minus, Plus } from "lucide-react"
 
 type Language = "EN" | "KR"
 
@@ -23,7 +22,6 @@ const mainProduct = {
   name: "사이버 후디 3000",
   price: 189000,
   priceUSD: 189,
-  aiMatch: 98,
   image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=800&h=1000&fit=crop",
   category: { EN: "HOODIES", KR: "후드" },
   description: {
@@ -79,9 +77,7 @@ const content = {
     sizeGuide: "SIZE GUIDE",
     quantity: "QTY",
     addToVibe: "ADD TO VIBE",
-    aiVision: "AI VISION: SIMILAR VIBES",
-    scanLabel: "SCAN FOR SIMILAR",
-    aiMatch: "AI Match"
+    aiVision: "AI VISION: SIMILAR VIBES"
   },
   KR: {
     back: "뒤로",
@@ -89,31 +85,19 @@ const content = {
     sizeGuide: "사이즈 가이드",
     quantity: "수량",
     addToVibe: "장바구니 담기",
-    aiVision: "AI 추천: 비슷한 바이브",
-    scanLabel: "유사 상품 스캔",
-    aiMatch: "AI 매치"
+    aiVision: "AI 추천: 비슷한 바이브"
   }
 }
 
 export function ProductDetail({ language }: ProductDetailProps) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
-  const [isScanning, setIsScanning] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const formatPrice = (p: number, curr: string) => {
     if (curr === "KRW") {
       return `${p.toLocaleString()}원`
     }
     return `$${p}`
-  }
-
-  const handleScan = () => {
-    setIsScanning(true)
-    setTimeout(() => {
-      setIsScanning(false)
-      setIsModalOpen(true)
-    }, 1000)
   }
 
   return (
@@ -147,32 +131,6 @@ export function ProductDetail({ language }: ProductDetailProps) {
                 className="object-cover"
                 priority
               />
-
-              {/* Scan for Similar Button */}
-              <button
-                onClick={handleScan}
-                className={`absolute bottom-4 right-4 z-20 flex items-center gap-2 px-4 py-3 bg-[#0a0a0a] text-[#CCFF00] font-bold uppercase text-sm tracking-wider border-4 border-[#CCFF00] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-all ${
-                  isScanning ? "animate-pulse bg-[#CCFF00] text-[#0a0a0a]" : ""
-                }`}
-                style={{
-                  boxShadow: isScanning ? "0 0 30px #CCFF00, 0 0 60px #CCFF00" : "none"
-                }}
-                aria-label={content[language].scanLabel}
-              >
-                <Scan className={`w-5 h-5 ${isScanning ? "animate-spin" : ""}`} />
-                <span className="hidden sm:inline">{content[language].scanLabel}</span>
-              </button>
-
-              {/* AI Match Badge */}
-              <div 
-                className="absolute top-4 left-4 z-20 flex items-center gap-2 px-4 py-2 bg-[#0a0a0a] border-4 border-[#CCFF00] text-[#CCFF00]"
-                style={{
-                  animation: 'badge-glow 2s ease-in-out infinite'
-                }}
-              >
-                <Sparkles className="w-5 h-5" />
-                <span className="font-bold">{content[language].aiMatch}: {mainProduct.aiMatch}%</span>
-              </div>
             </div>
           </div>
 
@@ -285,10 +243,13 @@ export function ProductDetail({ language }: ProductDetailProps) {
             {similarProducts.map((product, index) => (
               <div
                 key={index}
-                className="w-64 sm:w-72 flex-shrink-0 border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00] group cursor-pointer"
+                className="relative w-64 sm:w-72 flex-shrink-0 border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00] group cursor-pointer"
               >
-                {/* AI Match Badge */}
-                <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]">
+                {/* AI Match Badge - Shown in similar vibes section */}
+                <div 
+                  className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]"
+                  style={{ animation: 'badge-glow 2s ease-in-out infinite' }}
+                >
                   <Sparkles className="w-4 h-4" />
                   <span className="text-sm font-bold">{product.aiMatch}%</span>
                 </div>
@@ -318,13 +279,6 @@ export function ProductDetail({ language }: ProductDetailProps) {
           </div>
         </div>
       </section>
-
-      {/* AI Visual Search Modal */}
-      <AIVisualSearchModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        language={language}
-      />
     </div>
   )
 }

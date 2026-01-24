@@ -10,9 +10,10 @@ interface ProductCardProps {
   image: string
   category: string
   currency?: "USD" | "KRW"
+  showMatchBadge?: boolean
 }
 
-export function ProductCard({ name, price, aiMatch, image, category, currency = "USD" }: ProductCardProps) {
+export function ProductCard({ name, price, aiMatch, image, category, currency = "USD", showMatchBadge = false }: ProductCardProps) {
   const formatPrice = (p: number, curr: string) => {
     if (curr === "KRW") {
       return `${p.toLocaleString()}원`
@@ -21,16 +22,18 @@ export function ProductCard({ name, price, aiMatch, image, category, currency = 
   }
   return (
     <div className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00]">
-      {/* AI Match Badge */}
-      <div 
-        className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]"
-        style={{
-          animation: 'badge-glow 2s ease-in-out infinite'
-        }}
-      >
-        <Sparkles className="w-4 h-4" />
-        <span className="text-sm font-bold">AI Match: {aiMatch}%</span>
-      </div>
+      {/* AI Match Badge - Only shown when showMatchBadge is true */}
+      {showMatchBadge && (
+        <div 
+          className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]"
+          style={{
+            animation: 'badge-glow 2s ease-in-out infinite'
+          }}
+        >
+          <Sparkles className="w-4 h-4" />
+          <span className="text-sm font-bold">AI Match: {aiMatch}%</span>
+        </div>
+      )}
 
       {/* Product Image */}
       <div className="relative aspect-square overflow-hidden bg-[#1a1a1a]">

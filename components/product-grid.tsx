@@ -107,6 +107,7 @@ export function ProductGrid({ language }: { language: Language }) {
             image={product.image}
             category={product.category[language]}
             currency={language === "KR" ? "KRW" : "USD"}
+            showMatchBadge={false}
           />
         ))}
       </div>
