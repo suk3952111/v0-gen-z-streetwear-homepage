@@ -43,7 +43,7 @@ export function ProductCard({ id, name, price, aiMatch, image, category, currenc
           src={image || "/placeholder.svg"}
           alt={name}
           fill
-          className="object-cover transition-transform duration-500 group-hover:scale-110 grayscale group-hover:grayscale-0"
+          className="object-cover transition-transform duration-500 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-[#CCFF00] opacity-0 group-hover:opacity-10 transition-opacity" />
       </div>
