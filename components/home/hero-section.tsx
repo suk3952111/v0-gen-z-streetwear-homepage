@@ -68,11 +68,11 @@ export function HeroSection({ language }: { language: Language }) {
             {content[language].quizBtn}
           </button>
         </div>
+      </div>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <ArrowDown className="w-8 h-8 text-[#CCFF00]" />
-        </div>
+      {/* Scroll indicator - positioned relative to section, not inner content */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10">
+        <ArrowDown className="w-8 h-8 text-[#CCFF00]" />
       </div>
 
       {/* Corner accents */}
