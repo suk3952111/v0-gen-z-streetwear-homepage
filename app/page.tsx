@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useLanguage } from "@/components/providers/language-provider"
 // Common components
 import { Header } from "@/components/common/header"
 import { Footer } from "@/components/common/footer"
@@ -13,10 +14,8 @@ import { AIStyleFinderButton } from "@/components/shared/ai-style-finder-button"
 import { AIVisualSearchModal } from "@/components/shared/ai-visual-search-modal"
 import { AuthModal } from "@/components/shared/auth-modal"
 
-type Language = "EN" | "KR"
-
 export default function Home() {
-  const [language, setLanguage] = useState<Language>("EN")
+  const { language, setLanguage } = useLanguage()
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 

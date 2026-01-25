@@ -3,12 +3,12 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useLanguage } from "@/components/providers/language-provider"
 import { Header } from "@/components/common/header"
 import { Footer } from "@/components/common/footer"
 import { AuthModal } from "@/components/shared/auth-modal"
 import { Minus, Plus, X, Sparkles } from "lucide-react"
-
-type Language = "EN" | "KR"
+import { Language } from "@/types/language" // Import Language type
 
 const content = {
   EN: {
@@ -91,7 +91,7 @@ const vibeCategories = [
 ]
 
 export default function CartPage() {
-  const [language, setLanguage] = useState<Language>("EN")
+  const { language, setLanguage } = useLanguage()
   const [items, setItems] = useState(cartItems)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
