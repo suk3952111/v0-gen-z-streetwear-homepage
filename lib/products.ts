@@ -89,7 +89,7 @@ export const products: Product[] = [
     price: 225000,
     priceUSD: 225,
     aiMatch: 95,
-    image: "https://images.unsplash.com/photo-1614975059251-992f11792571?w=600&h=600&fit=crop",
+    image: "https://images.unsplash.com/photo-1564557287817-3785e38ec1f5?w=600&h=600&fit=crop",
     category: { EN: "HOODIES", KR: "후드" },
     tags: ["#Neon", "#Street", "#Y2K"]
   },
@@ -241,7 +241,7 @@ export const products: Product[] = [
     price: 275000,
     priceUSD: 275,
     aiMatch: 96,
-    image: "https://images.unsplash.com/photo-1520013573457-f60b35e0f22e?w=600&h=600&fit=crop",
+    image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&h=600&fit=crop&sat=-100&exp=10",
     category: { EN: "OUTER", KR: "아우터" },
     tags: ["#Neon", "#Y2K", "#Street"]
   },
@@ -485,7 +485,7 @@ export const products: Product[] = [
     price: 98000,
     priceUSD: 98,
     aiMatch: 89,
-    image: "https://images.unsplash.com/photo-1580906853149-f9139aca952c?w=600&h=600&fit=crop",
+    image: "https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=600&h=600&fit=crop&sat=-50",
     category: { EN: "BOTTOMS", KR: "하의" },
     tags: ["#Techwear", "#Minimal", "#Utility"]
   },
@@ -505,7 +505,7 @@ export const products: Product[] = [
     price: 118000,
     priceUSD: 118,
     aiMatch: 85,
-    image: "https://images.unsplash.com/photo-1583496661160-fb5886a0afe0?w=600&h=600&fit=crop",
+    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&h=600&fit=crop",
     category: { EN: "BOTTOMS", KR: "하의" },
     tags: ["#Utility", "#Street", "#Y2K"]
   },
