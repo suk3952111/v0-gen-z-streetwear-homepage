@@ -29,15 +29,15 @@ const content = {
   },
   KR: {
     title: "AI 비주얼 검색",
-    subtitle: "너만의 바이브 찾기",
-    dropZone: "이미지를 올려주세요",
-    dropHint: "드래그 앤 드롭 또는 클릭하여 업로드",
+    subtitle: "이미지로 찾는 나만의 바이브",
+    dropZone: "이미지를 여기에 놓으세요",
+    dropHint: "파일을 끌어다 놓거나 클릭하여 업로드",
     formats: "JPG, PNG, WEBP 지원",
-    scanning: "바이브 스캔중...",
-    detected: "감지된 태그",
-    results: "매칭 결과",
-    viewProduct: "보기",
-    noResults: "이미지를 업로드하여 매칭 상품을 찾아보세요"
+    scanning: "바이브 분석 중...",
+    detected: "감지된 키워드",
+    results: "추천 매칭 결과",
+    viewProduct: "상세보기",
+    noResults: "이미지를 업로드하여 스타일을 분석해보세요"
   }
 }
 

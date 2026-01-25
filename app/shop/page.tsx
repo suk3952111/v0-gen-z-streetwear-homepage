@@ -21,12 +21,12 @@ const pageContent = {
     clearFilters: "CLEAR ALL FILTERS"
   },
   KR: {
-    title: "전체 상품",
-    subtitle: "아카이브 둘러보기",
-    searchPlaceholder: "상품명 또는 #태그 검색...",
-    resultsCount: (count: number) => `${count}개 상품`,
-    noResults: "결과 없음",
-    noResultsSub: "다른 검색어나 태그를 시도해보세요",
+    title: "ALL DROPS",
+    subtitle: "전체 아카이브",
+    searchPlaceholder: "상품명 또는 #태그로 검색...",
+    resultsCount: (count: number) => `${count}개의 결과`,
+    noResults: "검색 결과 없음",
+    noResultsSub: "다른 검색어나 태그를 입력해보세요",
     clearFilters: "필터 초기화"
   }
 }

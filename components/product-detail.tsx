@@ -25,14 +25,14 @@ const content = {
     goBack: "GO BACK TO SHOP"
   },
   KR: {
-    back: "뒤로",
+    back: "뒤로가기",
     selectSize: "사이즈 선택",
     sizeGuide: "사이즈 가이드",
     quantity: "수량",
-    addToVibe: "장바구니 담기",
-    aiVision: "AI 추천: 비슷한 바이브",
+    addToVibe: "바이브 백에 담기",
+    aiVision: "AI 추천: 유사한 스타일",
     notFound: "상품을 찾을 수 없습니다",
-    goBack: "쇼핑 페이지로 돌아가기"
+    goBack: "상점으로 돌아가기"
   }
 }
 
