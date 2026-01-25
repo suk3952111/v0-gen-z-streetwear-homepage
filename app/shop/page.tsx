@@ -2,11 +2,11 @@
 
 import { useState, useMemo } from "react"
 import { Search, X } from "lucide-react"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { AuthModal } from "@/components/auth-modal"
-import { AIStyleFinder } from "@/components/ai-style-finder"
-import { AIVisualSearchModal } from "@/components/ai-visual-search-modal"
+import { Header } from "@/components/common/header"
+import { Footer } from "@/components/common/footer"
+import { AuthModal } from "@/components/shared/auth-modal"
+import { AIStyleFinderButton } from "@/components/shared/ai-style-finder-button"
+import { AIVisualSearchModal } from "@/components/shared/ai-visual-search-modal"
 import { ProductCard } from "@/components/product-card"
 import { products, categories, categoryMap, allTags, type Language } from "@/lib/products"
 
@@ -268,7 +268,7 @@ export default function ShopPage() {
 
       <Footer language={language} />
 
-      <AIStyleFinder language={language} onClick={() => setIsSearchModalOpen(true)} />
+      <AIStyleFinderButton language={language} onClick={() => setIsSearchModalOpen(true)} />
 
       <AIVisualSearchModal
         isOpen={isSearchModalOpen}

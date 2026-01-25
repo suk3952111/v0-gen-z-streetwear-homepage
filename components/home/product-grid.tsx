@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ProductCard } from "./product-card"
+import { ProductCard } from "@/components/product-card"
 import { products as allProducts, type Language } from "@/lib/products"
 
 // Show first 8 products on homepage

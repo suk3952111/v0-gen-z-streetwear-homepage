@@ -3,9 +3,9 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { AuthModal } from "@/components/auth-modal"
+import { Header } from "@/components/common/header"
+import { Footer } from "@/components/common/footer"
+import { AuthModal } from "@/components/shared/auth-modal"
 import { Minus, Plus, X, Sparkles } from "lucide-react"
 
 type Language = "EN" | "KR"

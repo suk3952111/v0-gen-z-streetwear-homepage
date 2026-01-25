@@ -4,7 +4,7 @@ import { Sparkles } from "lucide-react"
 
 type Language = "EN" | "KR"
 
-interface AIStyleFinderProps {
+interface AIStyleFinderButtonProps {
   language: Language
   onClick: () => void
 }
@@ -14,7 +14,7 @@ const buttonText = {
   KR: "AI 스타일 찾기"
 }
 
-export function AIStyleFinder({ language, onClick }: AIStyleFinderProps) {
+export function AIStyleFinderButton({ language, onClick }: AIStyleFinderButtonProps) {
   return (
     <button
       onClick={onClick}

@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import { useParams } from "next/navigation"
-import { Header } from "@/components/header"
+import { Header } from "@/components/common/header"
+import { Footer } from "@/components/common/footer"
 import { ProductDetail } from "@/components/product-detail"
-import { Footer } from "@/components/footer"
-import { AIStyleFinder } from "@/components/ai-style-finder"
-import { AIVisualSearchModal } from "@/components/ai-visual-search-modal"
-import { AuthModal } from "@/components/auth-modal"
+import { AIStyleFinderButton } from "@/components/shared/ai-style-finder-button"
+import { AIVisualSearchModal } from "@/components/shared/ai-visual-search-modal"
+import { AuthModal } from "@/components/shared/auth-modal"
 
 type Language = "EN" | "KR"
 
@@ -28,7 +28,7 @@ export default function ProductPage() {
       />
       <ProductDetail language={language} productId={productId} />
       <Footer language={language} />
-      <AIStyleFinder language={language} onClick={() => setIsSearchModalOpen(true)} />
+      <AIStyleFinderButton language={language} onClick={() => setIsSearchModalOpen(true)} />
       <AIVisualSearchModal
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}

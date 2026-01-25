@@ -1,14 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { Header } from "@/components/header"
-import { HeroSection } from "@/components/hero-section"
-import { MarqueeBanner } from "@/components/marquee-banner"
-import { ProductGrid } from "@/components/product-grid"
-import { AIStyleFinder } from "@/components/ai-style-finder"
-import { AIVisualSearchModal } from "@/components/ai-visual-search-modal"
-import { AuthModal } from "@/components/auth-modal"
-import { Footer } from "@/components/footer"
+// Common components
+import { Header } from "@/components/common/header"
+import { Footer } from "@/components/common/footer"
+import { MarqueeBanner } from "@/components/common/marquee-banner"
+// Home page components
+import { HeroSection } from "@/components/home/hero-section"
+import { ProductGrid } from "@/components/home/product-grid"
+// Shared components
+import { AIStyleFinderButton } from "@/components/shared/ai-style-finder-button"
+import { AIVisualSearchModal } from "@/components/shared/ai-visual-search-modal"
+import { AuthModal } from "@/components/shared/auth-modal"
 
 type Language = "EN" | "KR"
 
@@ -28,7 +31,7 @@ export default function Home() {
       <MarqueeBanner language={language} />
       <ProductGrid language={language} />
       <Footer language={language} />
-      <AIStyleFinder language={language} onClick={() => setIsSearchModalOpen(true)} />
+      <AIStyleFinderButton language={language} onClick={() => setIsSearchModalOpen(true)} />
       <AIVisualSearchModal
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
