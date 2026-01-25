@@ -2,13 +2,14 @@
 
 import { useState, useMemo } from "react"
 import { Search, X } from "lucide-react"
+import { useLanguage } from "@/components/providers/language-provider"
 import { Header } from "@/components/common/header"
 import { Footer } from "@/components/common/footer"
 import { AuthModal } from "@/components/shared/auth-modal"
 import { AIStyleFinderButton } from "@/components/shared/ai-style-finder-button"
 import { AIVisualSearchModal } from "@/components/shared/ai-visual-search-modal"
 import { ProductCard } from "@/components/product-card"
-import { products, categories, categoryMap, allTags, type Language } from "@/lib/products"
+import { products, categories, categoryMap, allTags } from "@/lib/products"
 
 const pageContent = {
   EN: {
@@ -32,7 +33,7 @@ const pageContent = {
 }
 
 export default function ShopPage() {
-  const [language, setLanguage] = useState<Language>("EN")
+  const { language, setLanguage } = useLanguage()
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")

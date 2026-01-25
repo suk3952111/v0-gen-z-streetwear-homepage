@@ -8,7 +8,6 @@ import { Header } from "@/components/common/header"
 import { Footer } from "@/components/common/footer"
 import { AuthModal } from "@/components/shared/auth-modal"
 import { Minus, Plus, X, Sparkles } from "lucide-react"
-import { Language } from "@/types/language" // Import Language type
 
 const content = {
   EN: {

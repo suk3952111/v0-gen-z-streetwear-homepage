@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useParams } from "next/navigation"
+import { useLanguage } from "@/components/providers/language-provider"
 import { Header } from "@/components/common/header"
 import { Footer } from "@/components/common/footer"
 import { ProductDetail } from "@/components/product-detail"
@@ -9,13 +10,11 @@ import { AIStyleFinderButton } from "@/components/shared/ai-style-finder-button"
 import { AIVisualSearchModal } from "@/components/shared/ai-visual-search-modal"
 import { AuthModal } from "@/components/shared/auth-modal"
 
-type Language = "EN" | "KR"
-
 export default function ProductPage() {
   const params = useParams()
   const productId = params.id as string
   
-  const [language, setLanguage] = useState<Language>("EN")
+  const { language, setLanguage } = useLanguage()
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 

@@ -2,12 +2,11 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useLanguage } from "@/components/providers/language-provider"
 import { Header } from "@/components/common/header"
 import { Footer } from "@/components/common/footer"
 import { AuthModal } from "@/components/shared/auth-modal"
 import { Eye, EyeOff } from "lucide-react"
-
-type Language = "EN" | "KR"
 
 const content = {
   EN: {
@@ -41,7 +40,7 @@ const content = {
 }
 
 export default function LoginPage() {
-  const [language, setLanguage] = useState<Language>("EN")
+  const { language, setLanguage } = useLanguage()
   const [showPassword, setShowPassword] = useState(false)
   const [isGoogleHovered, setIsGoogleHovered] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)

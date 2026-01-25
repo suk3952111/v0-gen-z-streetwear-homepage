@@ -4,7 +4,9 @@ import React from "react"
 
 import { useState, useRef, useCallback } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { X, Upload, Sparkles, ScanLine } from "lucide-react"
+import { products } from "@/lib/products"
 
 type Language = "EN" | "KR"
 
@@ -43,50 +45,16 @@ const content = {
 
 const mockTags = ["#Oversized", "#Neon", "#Street", "#Urban", "#Y2K", "#Cyber"]
 
-const mockResults = [
-  {
-    name: "사이버 후디 3000",
-    price: 189000,
-    priceUSD: 189,
-    aiMatch: 98,
-    image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=400&fit=crop"
-  },
-  {
-    name: "VOID PUFFER JACKET",
-    price: 299000,
-    priceUSD: 299,
-    aiMatch: 92,
-    image: "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400&h=400&fit=crop"
-  },
-  {
-    name: "네온 오버사이즈 티",
-    price: 79000,
-    priceUSD: 79,
-    aiMatch: 89,
-    image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=400&fit=crop"
-  },
-  {
-    name: "PIXEL VARSITY JACKET",
-    price: 265000,
-    priceUSD: 265,
-    aiMatch: 85,
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop"
-  },
-  {
-    name: "STATIC CREWNECK",
-    price: 95000,
-    priceUSD: 95,
-    aiMatch: 82,
-    image: "https://images.unsplash.com/photo-1578681994506-b8f463449011?w=400&h=400&fit=crop"
-  },
-  {
-    name: "매트릭스 트랙팬츠",
-    price: 120000,
-    priceUSD: 120,
-    aiMatch: 78,
-    image: "https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=400&h=400&fit=crop"
-  }
-]
+// Get 6 random products for mock results
+const getSearchResults = () => {
+  const shuffled = [...products].sort(() => 0.5 - Math.random())
+  return shuffled.slice(0, 6).map((product, index) => ({
+    ...product,
+    aiMatch: 98 - index * 4 // Simulated match scores: 98, 94, 90, 86, 82, 78
+  }))
+}
+
+const mockResults = getSearchResults()
 
 export function AIVisualSearchModal({ isOpen, onClose, language }: AIVisualSearchModalProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
@@ -322,9 +290,11 @@ export function AIVisualSearchModal({ isOpen, onClose, language }: AIVisualSearc
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {mockResults.map((product, index) => (
-                        <div
-                          key={index}
-                          className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_#CCFF00] cursor-pointer"
+                        <Link
+                          key={product.id}
+                          href={`/product/${product.id}`}
+                          onClick={onClose}
+                          className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_#CCFF00] cursor-pointer block"
                           style={{
                             animation: `fade-in-result 0.4s ease-out ${index * 0.1}s both`
                           }}
@@ -363,7 +333,7 @@ export function AIVisualSearchModal({ isOpen, onClose, language }: AIVisualSearc
                               </span>
                             </div>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </div>
