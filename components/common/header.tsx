@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { ShoppingBag, Menu, X, User } from "lucide-react"
+import { ShoppingBag, Menu, X, User, Heart } from "lucide-react"
 import { useState, createContext, useContext } from "react"
+import { useWishlist } from "@/components/providers/wishlist-provider"
 
 type Language = "EN" | "KR"
 
@@ -28,6 +29,7 @@ interface HeaderProps {
 
 export function Header({ language, onLanguageChange, onAuthClick }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { wishlistCount } = useWishlist()
 
   const navItems = {
     EN: { drops: "DROPS", archive: "ARCHIVE", about: "ABOUT" },
@@ -88,6 +90,20 @@ export function Header({ language, onLanguageChange, onAuthClick }: HeaderProps)
           >
             <User className="w-6 h-6" />
           </button>
+
+          {/* Wishlist Icon */}
+          <Link 
+            href="/wishlist"
+            className="relative p-2 border-2 border-[#CCFF00] bg-[#0a0a0a] text-[#CCFF00] transition-all hover:bg-[#CCFF00] hover:text-[#0a0a0a] hover:shadow-[0_0_15px_#CCFF00]"
+            aria-label="Wishlist"
+          >
+            <Heart className="w-6 h-6" />
+            {wishlistCount > 0 && (
+              <span className="absolute -top-2 -right-2 w-5 h-5 bg-[#CCFF00] text-[#0a0a0a] text-xs font-bold flex items-center justify-center">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
 
           {/* Cart Icon */}
           <Link 

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useState, useMemo } from "react"
 import { Sparkles, ChevronLeft, Minus, Plus } from "lucide-react"
 import { products, type Language, type Product } from "@/lib/products"
+import { ReviewSection } from "@/components/product/review-section"
 
 interface ProductDetailProps {
   language: Language
@@ -312,6 +313,9 @@ export function ProductDetail({ language, productId }: ProductDetailProps) {
           </div>
         </div>
       </section>
+
+      {/* Reviews Section */}
+      <ReviewSection productId={productId} language={language} />
     </div>
   )
 }

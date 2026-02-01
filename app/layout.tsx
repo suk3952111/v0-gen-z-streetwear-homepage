@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Space_Grotesk } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { LanguageProvider } from '@/components/providers/language-provider'
+import { WishlistProvider } from '@/components/providers/wishlist-provider'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({ 
@@ -42,7 +43,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans antialiased`}>
         <LanguageProvider>
-          {children}
+          <WishlistProvider>
+            {children}
+          </WishlistProvider>
         </LanguageProvider>
         <Analytics />
       </body>
