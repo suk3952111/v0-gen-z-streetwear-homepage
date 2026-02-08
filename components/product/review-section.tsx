@@ -1,11 +1,12 @@
 "use client"
 
 import React from "react"
-
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo } from "react"
 import Image from "next/image"
-import { Star, Upload, X, CheckCircle, ThumbsUp, Camera } from "lucide-react"
+import { Star, X, CheckCircle, ThumbsUp, Camera } from "lucide-react"
+import { motion } from "framer-motion"
 import type { Language } from "@/lib/products"
+import type { FocusImage } from "@/components/product/image-focus-modal"
 
 interface Review {
   id: string
@@ -24,11 +25,13 @@ interface Review {
 interface ReviewSectionProps {
   productId: string
   language: Language
+  onImageClick?: (images: FocusImage[], startIndex: number) => void
 }
 
 const content = {
   EN: {
     title: "REVIEWS",
+    customerPhotos: "CUSTOMER PHOTOS",
     writeReview: "WRITE A REVIEW",
     ratingLabel: "YOUR RATING",
     titleLabel: "REVIEW TITLE",
@@ -49,10 +52,11 @@ const content = {
     lowest: "Lowest Rated",
     mostHelpful: "Most Helpful",
     averageRating: "AVERAGE RATING",
-    totalReviews: (count: number) => `${count} REVIEW${count !== 1 ? 'S' : ''}`,
+    totalReviews: (count: number) => `${count} REVIEW${count !== 1 ? "S" : ""}`,
   },
   KR: {
     title: "리뷰",
+    customerPhotos: "고객 사진",
     writeReview: "리뷰 작성하기",
     ratingLabel: "평점",
     titleLabel: "리뷰 제목",
@@ -77,7 +81,6 @@ const content = {
   },
 }
 
-// Mock reviews data
 const mockReviews: Review[] = [
   {
     id: "rev-001",
@@ -87,12 +90,12 @@ const mockReviews: Review[] = [
     title: "Absolutely fire, no cap",
     content: "This hoodie is insane. The fit is perfect oversized and the material quality is top tier. Definitely copping more from this brand. The neon details hit different in person.",
     images: [
-      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=200&h=200&fit=crop",
-      "https://images.unsplash.com/photo-1578768079052-aa76e52ff62e?w=200&h=200&fit=crop"
+      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1578768079052-aa76e52ff62e?w=400&h=400&fit=crop",
     ],
     is_verified_purchase: true,
     helpful_count: 24,
-    created_at: "2024-01-15T10:30:00Z"
+    created_at: "2024-01-15T10:30:00Z",
   },
   {
     id: "rev-002",
@@ -101,10 +104,12 @@ const mockReviews: Review[] = [
     rating: 4,
     title: "퀄리티 좋음, 사이즈 큼",
     content: "원단이 생각보다 두껍고 좋아요. 다만 오버핏이라 평소 사이즈보다 한 치수 작게 사는 걸 추천합니다. 디자인은 진짜 예쁨.",
-    images: [],
+    images: [
+      "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400&h=400&fit=crop",
+    ],
     is_verified_purchase: true,
     helpful_count: 18,
-    created_at: "2024-01-10T14:20:00Z"
+    created_at: "2024-01-10T14:20:00Z",
   },
   {
     id: "rev-003",
@@ -114,58 +119,72 @@ const mockReviews: Review[] = [
     title: "Worth every penny",
     content: "The attention to detail is crazy. Reflective elements, quality zippers, premium feel. This is what streetwear should be. Will definitely buy again.",
     images: [
-      "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=200&h=200&fit=crop"
+      "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=400&fit=crop",
     ],
     is_verified_purchase: false,
     helpful_count: 12,
-    created_at: "2024-01-05T09:15:00Z"
-  }
+    created_at: "2024-01-05T09:15:00Z",
+  },
 ]
 
-export function ReviewSection({ productId, language }: ReviewSectionProps) {
+export function ReviewSection({ productId, language, onImageClick }: ReviewSectionProps) {
   const [reviews, setReviews] = useState<Review[]>(mockReviews)
   const [isWriting, setIsWriting] = useState(false)
   const [sortBy, setSortBy] = useState<"newest" | "highest" | "lowest" | "helpful">("newest")
-  
+
   // Form state
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [title, setTitle] = useState("")
   const [reviewContent, setReviewContent] = useState("")
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const t = content[language]
 
-  // Calculate average rating
-  const averageRating = reviews.length > 0 
+  const averageRating = reviews.length > 0
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : "0.0"
 
-  // Sort reviews
+  // Collect all review images with context for the focus-mode gallery
+  const allReviewFocusImages: FocusImage[] = useMemo(() => {
+    const imgs: FocusImage[] = []
+    reviews.forEach((review) => {
+      review.images.forEach((src, imgIdx) => {
+        imgs.push({
+          id: `review-${review.id}-${imgIdx}`,
+          src: src.replace("w=400&h=400", "w=800&h=800"),
+          alt: `${review.username} - photo ${imgIdx + 1}`,
+          type: "review",
+          reviewContext: {
+            username: review.username,
+            rating: review.rating,
+            content: review.content,
+          },
+        })
+      })
+    })
+    return imgs
+  }, [reviews])
+
   const sortedReviews = [...reviews].sort((a, b) => {
     switch (sortBy) {
-      case "newest":
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      case "highest":
-        return b.rating - a.rating
-      case "lowest":
-        return a.rating - b.rating
-      case "helpful":
-        return b.helpful_count - a.helpful_count
-      default:
-        return 0
+      case "newest": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      case "highest": return b.rating - a.rating
+      case "lowest": return a.rating - b.rating
+      case "helpful": return b.helpful_count - a.helpful_count
+      default: return 0
     }
   })
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
-    
     const newImages: string[] = []
     Array.from(files).slice(0, 5 - uploadedImages.length).forEach(file => {
-      const url = URL.createObjectURL(file)
-      newImages.push(url)
+      newImages.push(URL.createObjectURL(file))
     })
     setUploadedImages(prev => [...prev, ...newImages].slice(0, 5))
   }
@@ -177,7 +196,6 @@ export function ReviewSection({ productId, language }: ReviewSectionProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (rating === 0 || !reviewContent.trim()) return
-
     const newReview: Review = {
       id: `rev-${Date.now()}`,
       user_id: "current-user",
@@ -188,9 +206,8 @@ export function ReviewSection({ productId, language }: ReviewSectionProps) {
       images: uploadedImages,
       is_verified_purchase: false,
       helpful_count: 0,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     }
-
     setReviews(prev => [newReview, ...prev])
     setIsWriting(false)
     setRating(0)
@@ -200,12 +217,19 @@ export function ReviewSection({ productId, language }: ReviewSectionProps) {
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString(language === "KR" ? "ko-KR" : "en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric"
-    })
+    return new Date(dateString).toLocaleDateString(
+      language === "KR" ? "ko-KR" : "en-US",
+      { year: "numeric", month: "short", day: "numeric" }
+    )
+  }
+
+  // Handle clicking a review image -- find its global index
+  const handleReviewImageClick = (reviewId: string, imgIdx: number) => {
+    if (!onImageClick) return
+    const globalIdx = allReviewFocusImages.findIndex(
+      (fi) => fi.id === `review-${reviewId}-${imgIdx}`
+    )
+    onImageClick(allReviewFocusImages, globalIdx >= 0 ? globalIdx : 0)
   }
 
   return (
@@ -216,19 +240,14 @@ export function ReviewSection({ productId, language }: ReviewSectionProps) {
           <h2 className="text-3xl md:text-5xl font-bold text-white uppercase tracking-tighter">
             {t.title}
           </h2>
-          
-          {/* Average Rating */}
           <div className="flex items-center gap-4">
             <div className="text-center">
               <p className="text-[#888888] text-xs uppercase tracking-wider mb-1">{t.averageRating}</p>
               <div className="flex items-center gap-2">
                 <span className="text-4xl font-bold text-[#CCFF00]">{averageRating}</span>
                 <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`w-5 h-5 ${star <= Math.round(Number(averageRating)) ? "text-[#CCFF00] fill-[#CCFF00]" : "text-[#333333]"}`}
-                    />
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} className={`w-5 h-5 ${s <= Math.round(Number(averageRating)) ? "text-[#CCFF00] fill-[#CCFF00]" : "text-[#333333]"}`} />
                   ))}
                 </div>
               </div>
@@ -237,6 +256,31 @@ export function ReviewSection({ productId, language }: ReviewSectionProps) {
           </div>
         </div>
       </div>
+
+      {/* Customer Photos Strip - clickable */}
+      {allReviewFocusImages.length > 0 && (
+        <div className="mb-10">
+          <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-4">{t.customerPhotos}</h3>
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+            {allReviewFocusImages.map((fi, idx) => (
+              <motion.button
+                key={fi.id}
+                layoutId={`focus-image-${fi.id}`}
+                onClick={() => onImageClick?.(allReviewFocusImages, idx)}
+                className="relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0 border-2 border-[#333333] hover:border-[#CCFF00] transition-colors overflow-hidden group cursor-zoom-in"
+              >
+                <Image
+                  src={fi.src || "/placeholder.svg"}
+                  alt={fi.alt}
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-[#CCFF00] opacity-0 group-hover:opacity-10 transition-opacity" />
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Write Review Button / Form */}
       {!isWriting ? (
@@ -250,121 +294,59 @@ export function ReviewSection({ productId, language }: ReviewSectionProps) {
         <form onSubmit={handleSubmit} className="mb-12 border-4 border-[#CCFF00] p-6 bg-[#0a0a0a]">
           {/* Rating */}
           <div className="mb-6">
-            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">
-              {t.ratingLabel} *
-            </label>
+            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">{t.ratingLabel} *</label>
             <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
+              {[1, 2, 3, 4, 5].map((s) => (
                 <button
-                  key={star}
+                  key={s}
                   type="button"
-                  onClick={() => setRating(star)}
-                  onMouseEnter={() => setHoverRating(star)}
+                  onClick={() => setRating(s)}
+                  onMouseEnter={() => setHoverRating(s)}
                   onMouseLeave={() => setHoverRating(0)}
                   className="p-1 transition-transform hover:scale-110"
                 >
-                  <Star
-                    className={`w-10 h-10 transition-colors ${
-                      star <= (hoverRating || rating) 
-                        ? "text-[#CCFF00] fill-[#CCFF00]" 
-                        : "text-[#333333]"
-                    }`}
-                  />
+                  <Star className={`w-10 h-10 transition-colors ${s <= (hoverRating || rating) ? "text-[#CCFF00] fill-[#CCFF00]" : "text-[#333333]"}`} />
                 </button>
               ))}
             </div>
           </div>
-
           {/* Title */}
           <div className="mb-6">
-            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">
-              {t.titleLabel}
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t.titlePlaceholder}
-              className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white placeholder-[#666666] focus:border-[#CCFF00] focus:outline-none uppercase"
-            />
+            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">{t.titleLabel}</label>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t.titlePlaceholder} className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white placeholder-[#666666] focus:border-[#CCFF00] focus:outline-none uppercase" />
           </div>
-
           {/* Content */}
           <div className="mb-6">
-            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">
-              {t.contentLabel} *
-            </label>
-            <textarea
-              value={reviewContent}
-              onChange={(e) => setReviewContent(e.target.value)}
-              placeholder={t.contentPlaceholder}
-              rows={4}
-              className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white placeholder-[#666666] focus:border-[#CCFF00] focus:outline-none resize-none"
-            />
+            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">{t.contentLabel} *</label>
+            <textarea value={reviewContent} onChange={(e) => setReviewContent(e.target.value)} placeholder={t.contentPlaceholder} rows={4} className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white placeholder-[#666666] focus:border-[#CCFF00] focus:outline-none resize-none" />
           </div>
-
           {/* Image Upload */}
           <div className="mb-6">
-            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">
-              {t.imagesLabel}
-            </label>
+            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">{t.imagesLabel}</label>
             <p className="text-[#888888] text-xs mb-3">{t.imagesHint}</p>
-            
             <div className="flex flex-wrap gap-3">
               {uploadedImages.map((img, index) => (
                 <div key={index} className="relative w-20 h-20 border-2 border-[#CCFF00]">
                   <Image src={img || "/placeholder.svg"} alt={`Upload ${index + 1}`} fill className="object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-[#ff4444] text-white flex items-center justify-center"
-                  >
+                  <button type="button" onClick={() => removeImage(index)} className="absolute -top-2 -right-2 w-6 h-6 bg-[#ff4444] text-white flex items-center justify-center">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ))}
-              
               {uploadedImages.length < 5 && (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-20 h-20 border-2 border-dashed border-[#333333] text-[#666666] flex flex-col items-center justify-center hover:border-[#CCFF00] hover:text-[#CCFF00] transition-colors"
-                >
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="w-20 h-20 border-2 border-dashed border-[#333333] text-[#666666] flex flex-col items-center justify-center hover:border-[#CCFF00] hover:text-[#CCFF00] transition-colors">
                   <Camera className="w-6 h-6" />
                 </button>
               )}
             </div>
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageUpload}
-              className="hidden"
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
           </div>
-
           {/* Buttons */}
           <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={rating === 0 || !reviewContent.trim()}
-              className="px-8 py-3 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <button type="submit" disabled={rating === 0 || !reviewContent.trim()} className="px-8 py-3 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {t.submit}
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsWriting(false)
-                setRating(0)
-                setTitle("")
-                setReviewContent("")
-                setUploadedImages([])
-              }}
-              className="px-8 py-3 bg-transparent text-[#888888] font-bold uppercase tracking-wider border-4 border-[#333333] hover:border-[#888888] hover:text-white transition-colors"
-            >
+            <button type="button" onClick={() => { setIsWriting(false); setRating(0); setTitle(""); setReviewContent(""); setUploadedImages([]) }} className="px-8 py-3 bg-transparent text-[#888888] font-bold uppercase tracking-wider border-4 border-[#333333] hover:border-[#888888] hover:text-white transition-colors">
               {t.cancel}
             </button>
           </div>
@@ -373,9 +355,9 @@ export function ReviewSection({ productId, language }: ReviewSectionProps) {
 
       {/* Sort Options */}
       {reviews.length > 0 && (
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-8 flex-wrap">
           <span className="text-[#888888] text-sm uppercase tracking-wider">{t.sortBy}:</span>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {[
               { value: "newest", label: t.newest },
               { value: "highest", label: t.highest },
@@ -412,21 +394,15 @@ export function ReviewSection({ productId, language }: ReviewSectionProps) {
               {/* Review Header */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                 <div className="flex items-center gap-4">
-                  {/* Avatar */}
                   <div className="w-12 h-12 bg-[#1a1a1a] border-2 border-[#CCFF00] flex items-center justify-center">
-                    <span className="text-[#CCFF00] font-bold text-lg">
-                      {review.username.charAt(0).toUpperCase()}
-                    </span>
+                    <span className="text-[#CCFF00] font-bold text-lg">{review.username.charAt(0).toUpperCase()}</span>
                   </div>
                   <div>
                     <p className="text-white font-bold uppercase">{review.username}</p>
                     <div className="flex items-center gap-2">
                       <div className="flex gap-0.5">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`w-4 h-4 ${star <= review.rating ? "text-[#CCFF00] fill-[#CCFF00]" : "text-[#333333]"}`}
-                          />
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star key={s} className={`w-4 h-4 ${s <= review.rating ? "text-[#CCFF00] fill-[#CCFF00]" : "text-[#333333]"}`} />
                         ))}
                       </div>
                       {review.is_verified_purchase && (
@@ -441,24 +417,33 @@ export function ReviewSection({ productId, language }: ReviewSectionProps) {
                 <span className="text-[#888888] text-sm">{formatDate(review.created_at)}</span>
               </div>
 
-              {/* Review Content */}
               {review.title && (
                 <h4 className="text-white font-bold uppercase text-lg mb-2">{review.title}</h4>
               )}
               <p className="text-white leading-relaxed mb-4">{review.content}</p>
 
-              {/* Review Images */}
+              {/* Review Images - Clickable */}
               {review.images.length > 0 && (
                 <div className="flex gap-3 mb-4">
-                  {review.images.map((img, index) => (
-                    <div key={index} className="relative w-20 h-20 border-2 border-[#333333]">
-                      <Image src={img || "/placeholder.svg"} alt={`Review image ${index + 1}`} fill className="object-cover" />
-                    </div>
+                  {review.images.map((img, imgIdx) => (
+                    <motion.button
+                      key={imgIdx}
+                      layoutId={`focus-image-review-${review.id}-${imgIdx}`}
+                      onClick={() => handleReviewImageClick(review.id, imgIdx)}
+                      className="relative w-20 h-20 border-2 border-[#333333] hover:border-[#CCFF00] transition-colors overflow-hidden group cursor-zoom-in"
+                    >
+                      <Image
+                        src={img || "/placeholder.svg"}
+                        alt={`Review image ${imgIdx + 1}`}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-[#CCFF00] opacity-0 group-hover:opacity-10 transition-opacity" />
+                    </motion.button>
                   ))}
                 </div>
               )}
 
-              {/* Helpful Button */}
               <button className="flex items-center gap-2 text-[#888888] text-sm font-bold uppercase hover:text-[#CCFF00] transition-colors">
                 <ThumbsUp className="w-4 h-4" />
                 {t.helpful} ({review.helpful_count})
