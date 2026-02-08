@@ -9,21 +9,17 @@ const content = {
     subtitle: "AI-CURATED STREETWEAR",
     tagline: "THE FIT FINDER THAT ACTUALLY GETS YOU.",
     taglineAccent: "NO CAP.",
-    shopBtn: "SHOP DROPS",
-    quizBtn: "AI STYLE QUIZ"
   },
   KR: {
     subtitle: "AI 큐레이션 스트릿웨어",
     tagline: "너만의 스타일을 찾아주는",
-    taglineAccent: "찐 핏 파인더.",
-    shopBtn: "쇼핑하기",
-    quizBtn: "AI 스타일 퀴즈"
+    taglineAccent: "찐 핏 파인더."
   }
 }
 
 export function HeroSection({ language }: { language: Language }) {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden pt-20">
       {/* Grainy texture overlay */}
       <div 
         className="absolute inset-0 opacity-40 pointer-events-none"
@@ -54,20 +50,11 @@ export function HeroSection({ language }: { language: Language }) {
           <span className="text-[#CCFF00]">CHECK</span>
         </h1>
         
-        <p className="text-white text-xl md:text-2xl font-medium max-w-2xl mx-auto mb-8 leading-relaxed">
+        <p className="text-white text-xl md:text-2xl font-medium max-w-2xl mx-auto leading-relaxed">
           {content[language].tagline}
           <br />
           <span className="text-[#CCFF00]">{content[language].taglineAccent}</span>
         </p>
-
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <button className="px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] text-lg font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors">
-            {content[language].shopBtn}
-          </button>
-          <button className="px-8 py-4 bg-transparent text-[#CCFF00] text-lg font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
-            {content[language].quizBtn}
-          </button>
-        </div>
       </div>
 
       {/* Scroll indicator - positioned relative to section, not inner content */}
