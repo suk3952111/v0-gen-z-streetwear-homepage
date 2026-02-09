@@ -19,7 +19,7 @@ const content = {
 
 export function HeroSection({ language }: { language: Language }) {
   return (
-    <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden pt-20">
+    <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden pt-20 pb-20">
       {/* Grainy texture overlay */}
       <div 
         className="absolute inset-0 opacity-40 pointer-events-none"
