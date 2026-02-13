@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Search, X } from "lucide-react"
 import { useLanguage } from "@/components/providers/language-provider"
 import { Header } from "@/components/common/header"
 import { Footer } from "@/components/common/footer"
@@ -9,7 +8,8 @@ import { AuthModal } from "@/components/shared/auth-modal"
 import { AIStyleFinderButton } from "@/components/shared/ai-style-finder-button"
 import { AIVisualSearchModal } from "@/components/shared/ai-visual-search-modal"
 import { ProductCard } from "@/components/product-card"
-import { products, categories, categoryMap, allTags } from "@/lib/products"
+import { CollapsibleFilterBar } from "@/components/shop/collapsible-filter-bar"
+import { products, categoryMap } from "@/lib/products"
 
 const pageContent = {
   EN: {
@@ -101,81 +101,21 @@ export default function ShopPage() {
       />
 
       <div className="relative z-10 pt-24">
-        {/* Sticky Filter Bar */}
-        <div className="sticky top-[73px] z-40 bg-[#0a0a0a] border-b-4 border-[#CCFF00]">
-          <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-            {/* Page Title */}
-            <div className="mb-6">
-              <p className="text-[#CCFF00] text-sm font-bold uppercase tracking-[0.3em] mb-2">
-                {t.subtitle}
-              </p>
-              <h1 className="text-4xl md:text-6xl font-bold text-white uppercase tracking-tighter">
-                {t.title}
-              </h1>
-            </div>
-
-            {/* Search Bar */}
-            <div className="relative mb-6">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[#CCFF00]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t.searchPlaceholder}
-                className="w-full pl-14 pr-12 py-4 bg-[#0a0a0a] border-4 border-[#CCFF00] text-white font-mono text-lg uppercase tracking-wider placeholder:text-[#888888] focus:outline-none focus:shadow-[0_0_20px_#CCFF00]"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#CCFF00] hover:text-white transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              )}
-            </div>
-
-            {/* Category Tabs */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {categories[language].map((cat, index) => {
-                const catKey = categoryMap[cat] || cat
-                const isActive = activeCategory === catKey
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(catKey)}
-                    className={`px-5 py-3 text-sm md:text-base font-bold uppercase tracking-wider border-4 transition-all ${
-                      isActive
-                        ? "bg-[#CCFF00] text-[#0a0a0a] border-[#CCFF00]"
-                        : "bg-[#0a0a0a] text-[#CCFF00] border-[#CCFF00] hover:bg-[#1a1a1a]"
-                    }`}
-                  >
-                    [{cat}]
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Tag Filters */}
-            <div className="flex flex-wrap gap-2">
-              {allTags.map(tag => {
-                const isActive = activeTags.includes(tag)
-                return (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider border-2 transition-all ${
-                      isActive
-                        ? "bg-[#CCFF00] text-[#0a0a0a] border-[#CCFF00] shadow-[0_0_10px_#CCFF00]"
-                        : "bg-[#0a0a0a] text-[#888888] border-[#888888] hover:border-[#CCFF00] hover:text-[#CCFF00]"
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
+        {/* Collapsible Sticky Filter Bar */}
+        <CollapsibleFilterBar
+          language={language}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
+          activeTags={activeTags}
+          onToggleTag={toggleTag}
+          content={{
+            title: t.title,
+            subtitle: t.subtitle,
+            searchPlaceholder: t.searchPlaceholder,
+          }}
+        />
 
         {/* Results Count & Clear */}
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
