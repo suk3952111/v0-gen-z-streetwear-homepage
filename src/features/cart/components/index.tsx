@@ -1,85 +1,41 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useLanguage } from "@/components/providers/language-provider"
-import { AuthModal } from "@/features/users/components/auth-modal"
-import { Minus, Plus, X, Sparkles } from "lucide-react"
-
-const content = {
-  EN: {
-    title: "VIBE",
-    titleAccent: "BAG",
-    empty: "YOUR VIBE BAG IS EMPTY",
-    shopNow: "START SHOPPING",
-    remove: "REMOVE",
-    quantity: "QTY",
-    subtotal: "SUBTOTAL",
-    shipping: "SHIPPING",
-    shippingValue: "CALCULATED AT CHECKOUT",
-    total: "TOTAL",
-    checkout: "CHECKOUT NOW",
-    continueShop: "CONTINUE SHOPPING",
-    aiAnalyzer: "AI VIBE ANALYZER",
-    vibeScore: "YOUR STYLE VIBE",
-    orderNumber: "ORDER #",
-    date: "DATE",
-    items: "ITEMS",
-  },
-  KR: {
-    title: "VIBE",
-    titleAccent: "BAG",
-    empty: "바이브 백이 비어 있습니다",
-    shopNow: "쇼핑 시작하기",
-    remove: "삭제",
-    quantity: "수량",
-    subtotal: "주문 금액",
-    shipping: "배송비",
-    shippingValue: "결제 단계에서 계산",
-    total: "최종 결제 금액",
-    checkout: "주문하기",
-    continueShop: "쇼핑 계속하기",
-    aiAnalyzer: "AI 스타일 분석",
-    vibeScore: "당신의 바이브 스코어",
-    orderNumber: "주문번호 #",
-    date: "날짜",
-    items: "상품 목록",
-  },
-}
-
+import { Minus, Plus, Sparkles, X } from "lucide-react"
 import { cartItems, vibeCategories } from "@/mocks/cart"
+import { useI18n } from "@/lib/i18n/use-i18n"
+import { NoiseOverlay } from "@/components/ui"
 
 export function CartView() {
-  const { language } = useLanguage()
+  const { locale, t } = useI18n("cart")
   const [items, setItems] = useState(cartItems)
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-
-  const t = language === "KR" ? content.KR : content.EN
 
   const updateQuantity = (id: number, delta: number) => {
-    setItems(
-      items.map((item) =>
-        item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
-      )
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item,
+      ),
     )
   }
 
   const removeItem = (id: number) => {
-    setItems(items.filter((item) => item.id !== id))
+    setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
   const formatPrice = (usd: number, krw: number) => {
-    return language === "KR" ? `${krw.toLocaleString()}원` : `$${usd}`
+    return locale === "KR" ? `${krw.toLocaleString()}원` : `$${usd}`
   }
 
   const subtotal = items.reduce(
-    (acc, item) => acc + (language === "KR" ? item.priceKRW : item.price) * item.quantity,
-    0
+    (acc, item) => acc + (locale === "KR" ? item.priceKRW : item.price) * item.quantity,
+    0,
   )
 
   const orderNumber = "VC" + Math.random().toString(36).substring(2, 8).toUpperCase()
-  const currentDate = new Date().toLocaleDateString("en-US", {
+
+  const currentDate = new Date().toLocaleDateString(locale === "KR" ? "ko-KR" : "en-US", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -88,29 +44,24 @@ export function CartView() {
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
       <section className="relative pt-24 pb-20 px-4 md:px-8">
-        <div
-          className="absolute inset-0 opacity-20 pointer-events-none"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-          }}
-        />
+        <NoiseOverlay />
 
         <div className="relative z-10 max-w-7xl mx-auto">
           <div className="mb-12 border-b-4 border-[#CCFF00] pb-6">
             <h1 className="text-6xl md:text-8xl font-bold text-white tracking-tighter leading-none">
-              {t.title}
-              <span className="text-[#CCFF00]">{t.titleAccent}</span>
+              {t("title")}
+              <span className="text-[#CCFF00]">{t("titleAccent")}</span>
             </h1>
           </div>
 
           {items.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-[#888888] text-2xl uppercase tracking-wider mb-8">{t.empty}</p>
+              <p className="text-[#888888] text-2xl uppercase tracking-wider mb-8">{t("empty")}</p>
               <Link
                 href="/"
                 className="inline-block px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] text-xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors"
               >
-                {t.shopNow}
+                {t("shopNow")}
               </Link>
             </div>
           ) : (
@@ -122,12 +73,7 @@ export function CartView() {
                     className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-4 md:p-6 flex flex-col md:flex-row gap-6"
                   >
                     <div className="relative w-full md:w-40 h-40 border-2 border-[#CCFF00] flex-shrink-0">
-                      <Image
-                        src={item.image || "/placeholder.svg"}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                      />
+                      <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
                       <span className="absolute top-2 left-2 px-2 py-1 bg-[#0a0a0a] border border-[#CCFF00] text-[#CCFF00] text-xs font-bold">
                         {item.vibeTag}
                       </span>
@@ -143,7 +89,7 @@ export function CartView() {
 
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-[#888888] text-sm uppercase mr-2">{t.quantity}</span>
+                          <span className="text-[#888888] text-sm uppercase mr-2">{t("quantity")}</span>
                           <button
                             onClick={() => updateQuantity(item.id, -1)}
                             className="w-10 h-10 border-2 border-[#CCFF00] text-[#CCFF00] flex items-center justify-center hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors"
@@ -173,7 +119,7 @@ export function CartView() {
                             aria-label="Remove item"
                           >
                             <X className="w-5 h-5" />
-                            <span className="hidden md:inline">{t.remove}</span>
+                            <span className="hidden md:inline">{t("remove")}</span>
                           </button>
                         </div>
                       </div>
@@ -184,11 +130,9 @@ export function CartView() {
                 <div className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-6">
                   <div className="flex items-center gap-3 mb-6">
                     <Sparkles className="w-6 h-6 text-[#CCFF00]" />
-                    <h3 className="text-xl font-bold text-[#CCFF00] uppercase tracking-wider">
-                      {t.aiAnalyzer}
-                    </h3>
+                    <h3 className="text-xl font-bold text-[#CCFF00] uppercase tracking-wider">{t("aiAnalyzer")}</h3>
                   </div>
-                  <p className="text-[#888888] text-sm uppercase tracking-wider mb-4">{t.vibeScore}</p>
+                  <p className="text-[#888888] text-sm uppercase tracking-wider mb-4">{t("vibeScore")}</p>
                   <div className="space-y-4">
                     {vibeCategories.map((vibe) => (
                       <div key={vibe.name}>
@@ -221,18 +165,18 @@ export function CartView() {
 
                   <div className="p-6 space-y-4 font-mono text-sm">
                     <div className="flex justify-between text-[#888888]">
-                      <span>{t.orderNumber}</span>
+                      <span>{t("orderNumber")}</span>
                       <span className="text-white">{orderNumber}</span>
                     </div>
                     <div className="flex justify-between text-[#888888]">
-                      <span>{t.date}</span>
+                      <span>{t("date")}</span>
                       <span className="text-white">{currentDate}</span>
                     </div>
 
                     <div className="border-t border-dashed border-[#333333] my-4" />
 
                     <div className="space-y-2">
-                      <p className="text-[#888888] uppercase">{t.items}</p>
+                      <p className="text-[#888888] uppercase">{t("items")}</p>
                       {items.map((item) => (
                         <div key={item.id} className="flex justify-between text-white text-xs">
                           <span className="truncate max-w-[60%]">
@@ -246,23 +190,19 @@ export function CartView() {
                     <div className="border-t border-dashed border-[#333333] my-4" />
 
                     <div className="flex justify-between text-[#888888]">
-                      <span>{t.subtotal}</span>
-                      <span className="text-white">
-                        {language === "KR" ? `${subtotal.toLocaleString()}원` : `$${subtotal}`}
-                      </span>
+                      <span>{t("subtotal")}</span>
+                      <span className="text-white">{locale === "KR" ? `${subtotal.toLocaleString()}원` : `$${subtotal}`}</span>
                     </div>
                     <div className="flex justify-between text-[#888888]">
-                      <span>{t.shipping}</span>
-                      <span className="text-white text-xs">{t.shippingValue}</span>
+                      <span>{t("shipping")}</span>
+                      <span className="text-white text-xs">{t("shippingValue")}</span>
                     </div>
 
                     <div className="border-t-4 border-[#CCFF00] my-4" />
 
                     <div className="flex justify-between text-xl font-bold">
-                      <span className="text-white">{t.total}</span>
-                      <span className="text-[#CCFF00]">
-                        {language === "KR" ? `${subtotal.toLocaleString()}원` : `$${subtotal}`}
-                      </span>
+                      <span className="text-white">{t("total")}</span>
+                      <span className="text-[#CCFF00]">{locale === "KR" ? `${subtotal.toLocaleString()}원` : `$${subtotal}`}</span>
                     </div>
                   </div>
 
@@ -286,13 +226,13 @@ export function CartView() {
 
                   <div className="p-6 pt-0 space-y-4">
                     <button className="w-full py-4 bg-[#CCFF00] text-[#0a0a0a] text-xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors">
-                      {t.checkout}
+                      {t("checkout")}
                     </button>
                     <Link
                       href="/"
                       className="block text-center text-[#888888] text-sm uppercase tracking-wider hover:text-[#CCFF00] transition-colors"
                     >
-                      {t.continueShop}
+                      {t("continueShop")}
                     </Link>
                   </div>
                 </div>
@@ -301,11 +241,7 @@ export function CartView() {
           )}
         </div>
       </section>
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        language={language}
-      />
     </main>
   )
 }
+

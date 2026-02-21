@@ -1,2 +1,1 @@
-﻿// Placeholder to keep the ui directory in version control.
-export {}
+﻿export { NoiseOverlay, SectionSurface } from "./noise-overlay"
