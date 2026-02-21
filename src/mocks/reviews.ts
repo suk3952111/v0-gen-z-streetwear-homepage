@@ -1,0 +1,47 @@
+export const mockReviews = [
+  {
+    id: "rev-001",
+    user_id: "user-001",
+    username: "CYBER_KID_99",
+    rating: 5,
+    title: "Great quality, size runs large",
+    content: "Fabric quality is great and feels premium. The oversized fit is larger than expected, so consider sizing down.",
+    images: [
+      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1578768079052-aa76e52ff62e?w=400&h=400&fit=crop",
+    ],
+    is_verified_purchase: true,
+    helpful_count: 24,
+    created_at: "2024-01-15T10:30:00Z",
+  },
+  {
+    id: "rev-002",
+    user_id: "user-002",
+    username: "STREET_WARRIOR",
+    rating: 4,
+    title: "핏이 넉넉하고 재질이 좋아요",
+    content: "재질이 생각보다 탄탄하고 핏이 예쁩니다. 오버핏이라 평소보다 한 사이즈 작게 가도 괜찮았어요.",
+    images: [
+      "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400&h=400&fit=crop",
+    ],
+    is_verified_purchase: true,
+    helpful_count: 18,
+    created_at: "2024-01-10T14:20:00Z",
+  },
+  {
+    id: "rev-003",
+    user_id: "user-003",
+    username: "TECHWEAR_FAN",
+    rating: 5,
+    title: "디테일이 정말 좋아요",
+    content: "봉제와 마감이 깔끔하고 색감도 사진과 거의 동일합니다. 만족합니다.",
+    images: [
+      "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=400&fit=crop",
+    ],
+    is_verified_purchase: false,
+    helpful_count: 12,
+    created_at: "2024-01-05T09:15:00Z",
+  },
+]
