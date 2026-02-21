@@ -1,2 +1,2 @@
-// TODO: add domain service functions.
-export {}
+export * from './get-auth'
+export * from './get-user-by-id'

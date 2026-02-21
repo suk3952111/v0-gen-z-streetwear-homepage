@@ -1,8 +1,11 @@
-﻿"use client"
+"use client"
 
-import { useState } from "react"
+import { useActionState, useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { X, Eye, EyeOff } from "lucide-react"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import { loginAction } from "@/features/users/actions/login"
+import { signupAction } from "@/features/users/actions/signup"
 
 type AuthMode = "LOGIN" | "SIGNUP"
 
@@ -13,11 +16,31 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
+  const router = useRouter()
   const [mode, setMode] = useState<AuthMode>("LOGIN")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isGoogleHovered, setIsGoogleHovered] = useState(false)
   const { t } = useI18n("users.auth")
+
+  const [loginState, loginFormAction, isLoginPending] = useActionState(loginAction, null)
+  const [signupState, signupFormAction, isSignupPending] = useActionState(signupAction, null)
+
+  const isPending = mode === "LOGIN" ? isLoginPending : isSignupPending
+  const actionState = mode === "LOGIN" ? loginState : signupState
+  const formAction = mode === "LOGIN" ? loginFormAction : signupFormAction
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    const success = mode === "LOGIN" ? loginState?.success : signupState?.success
+    if (success) {
+      onClose()
+      router.refresh()
+    }
+  }, [isOpen, mode, loginState, signupState, onClose, router])
 
   if (!isOpen) return null
 
@@ -81,26 +104,56 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </p>
           </div>
 
-          <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-5" action={formAction}>
+            {actionState && actionState.message && (
+              <div
+                className={`border px-3 py-2 text-sm ${
+                  actionState.success
+                    ? "border-[#CCFF00] text-[#CCFF00]"
+                    : "border-[#ff4444] text-[#ff4444]"
+                }`}
+                role="alert"
+              >
+                {actionState.message}
+              </div>
+            )}
+
             {mode === "SIGNUP" && (
               <div>
                 <label className="block text-[#CCFF00] text-xs font-bold uppercase tracking-wider mb-2">{t("username")}</label>
-                <input type="text" placeholder={t("usernamePlaceholder")} className="w-full bg-transparent text-white text-base py-2.5 border-b-4 border-[#CCFF00] focus:outline-none focus:border-white placeholder:text-[#444444] transition-colors" />
+                <input
+                  name="name"
+                  type="text"
+                  placeholder={t("usernamePlaceholder")}
+                  className="w-full bg-transparent text-white text-base py-2.5 border-b-4 border-[#CCFF00] focus:outline-none focus:border-white placeholder:text-[#444444] transition-colors"
+                  required
+                  disabled={isPending}
+                />
               </div>
             )}
 
             <div>
               <label className="block text-[#CCFF00] text-xs font-bold uppercase tracking-wider mb-2">{t("email")}</label>
-              <input type="email" placeholder={t("emailPlaceholder")} className="w-full bg-transparent text-white text-base py-2.5 border-b-4 border-[#CCFF00] focus:outline-none focus:border-white placeholder:text-[#444444] transition-colors" />
+              <input
+                name="email"
+                type="email"
+                placeholder={t("emailPlaceholder")}
+                className="w-full bg-transparent text-white text-base py-2.5 border-b-4 border-[#CCFF00] focus:outline-none focus:border-white placeholder:text-[#444444] transition-colors"
+                required
+                disabled={isPending}
+              />
             </div>
 
             <div>
               <label className="block text-[#CCFF00] text-xs font-bold uppercase tracking-wider mb-2">{t("password")}</label>
               <div className="relative">
                 <input
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder={t("passwordPlaceholder")}
                   className="w-full bg-transparent text-white text-base py-2.5 border-b-4 border-[#CCFF00] focus:outline-none focus:border-white placeholder:text-[#444444] transition-colors pr-10"
+                  required
+                  disabled={isPending}
                 />
                 <button
                   type="button"
@@ -118,9 +171,12 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 <label className="block text-[#CCFF00] text-xs font-bold uppercase tracking-wider mb-2">{t("confirmPassword")}</label>
                 <div className="relative">
                   <input
+                    name="passwordConfirm"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder={t("passwordPlaceholder")}
                     className="w-full bg-transparent text-white text-base py-2.5 border-b-4 border-[#CCFF00] focus:outline-none focus:border-white placeholder:text-[#444444] transition-colors pr-10"
+                    required
+                    disabled={isPending}
                   />
                   <button
                     type="button"
@@ -140,8 +196,8 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
             )}
 
-            <button type="submit" className="w-full py-3.5 bg-[#CCFF00] text-[#0a0a0a] text-lg font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors">
-              {mode === "LOGIN" ? t("login") : t("signup")}
+            <button type="submit" disabled={isPending} className="w-full py-3.5 bg-[#CCFF00] text-[#0a0a0a] text-lg font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+              {isPending ? "Processing..." : mode === "LOGIN" ? t("login") : t("signup")}
             </button>
 
             <div className="flex items-center gap-4 my-6">
