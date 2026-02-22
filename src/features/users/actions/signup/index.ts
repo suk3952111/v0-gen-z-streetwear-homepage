@@ -23,7 +23,7 @@ export async function signupAction(
   if (!validatedFields.success) {
     return {
       success: false,
-      message: 'Please check your input values',
+      errorKey: 'validation_input',
       errors: validatedFields.error.flatten().fieldErrors,
     }
   }
@@ -49,27 +49,48 @@ export async function signupAction(
       if (errorMessage.includes('already registered') || errorMessage.includes('already exists')) {
         return {
           success: false,
-          message: 'This email is already registered',
+          errorKey: 'email_in_use_or_social',
+        }
+      }
+
+      if (errorMessage.includes('password')) {
+        return {
+          success: false,
+          errorKey: 'weak_password',
+        }
+      }
+
+      if (errorMessage.includes('signup is disabled')) {
+        return {
+          success: false,
+          errorKey: 'signup_disabled',
+        }
+      }
+
+      if (errorMessage.includes('too many requests') || errorMessage.includes('rate limit')) {
+        return {
+          success: false,
+          errorKey: 'rate_limited',
         }
       }
 
       if (errorMessage.includes('network')) {
         return {
           success: false,
-          message: 'Network error occurred. Please try again',
+          errorKey: 'network',
         }
       }
 
       return {
         success: false,
-        message: 'Failed to sign up. Please try again',
+        errorKey: 'signup_failed',
       }
     }
 
     if (!data.user) {
       return {
         success: false,
-        message: 'Failed to sign up. User was not created',
+        errorKey: 'signup_failed',
       }
     }
 
@@ -88,7 +109,7 @@ export async function signupAction(
 
     return {
       success: false,
-      message: 'Unexpected error occurred',
+      errorKey: 'unexpected',
     }
   }
 }

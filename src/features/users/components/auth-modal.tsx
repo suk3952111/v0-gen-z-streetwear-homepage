@@ -24,6 +24,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isGoogleHovered, setIsGoogleHovered] = useState(false)
   const [isGooglePending, setIsGooglePending] = useState(false)
+  const [oauthErrorKey, setOauthErrorKey] = useState<string | null>(null)
   const { t } = useI18n("users.auth")
 
   const [loginState, loginFormAction, isLoginPending] = useActionState(loginAction, null)
@@ -32,9 +33,17 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const isPending = mode === "LOGIN" ? isLoginPending : isSignupPending
   const actionState = mode === "LOGIN" ? loginState : signupState
   const formAction = mode === "LOGIN" ? loginFormAction : signupFormAction
+  const actionErrorKey = actionState && !actionState.success ? actionState.errorKey : null
+  const fallbackActionErrorMessage = actionState && !actionState.success ? actionState.message : null
+  const visibleErrorMessage = oauthErrorKey
+    ? t(`errors.${oauthErrorKey}`)
+    : actionErrorKey
+      ? t(`errors.${actionErrorKey}`)
+      : fallbackActionErrorMessage
 
   const handleGoogleAuth = async () => {
     try {
+      setOauthErrorKey(null)
       setIsGooglePending(true)
 
       const supabase = createSupabaseClient()
@@ -48,9 +57,21 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       })
 
       if (error) {
+        const message = error.message.toLowerCase()
+
+        if (message.includes("popup") && message.includes("close")) {
+          setOauthErrorKey("oauth_canceled")
+        } else if (message.includes("provider is not enabled")) {
+          setOauthErrorKey("oauth_provider_disabled")
+        } else if (message.includes("access_denied")) {
+          setOauthErrorKey("oauth_access_denied")
+        } else {
+          setOauthErrorKey("oauth_failed")
+        }
         setIsGooglePending(false)
       }
     } catch {
+      setOauthErrorKey("oauth_failed")
       setIsGooglePending(false)
     }
   }
@@ -66,6 +87,15 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       router.refresh()
     }
   }, [isOpen, mode, loginState, signupState, onClose, router])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setOauthErrorKey(null)
+      return
+    }
+
+    setOauthErrorKey(null)
+  }, [isOpen, mode])
 
   if (!isOpen) return null
 
@@ -86,7 +116,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         <div className="absolute -bottom-3 -left-3 w-6 h-6 border-b-4 border-l-4 border-[#CCFF00]" />
         <div className="absolute -bottom-3 -right-3 w-6 h-6 border-b-4 border-r-4 border-[#CCFF00]" />
 
-        <div className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-6 md:p-8 max-h-[90vh] overflow-y-auto">
+        <div className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-6 md:p-8 max-h-[90vh] overflow-y-auto scrollbar-neon">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 border-2 border-[#CCFF00] bg-[#0a0a0a] text-[#CCFF00] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors"
@@ -129,14 +159,19 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </p>
           </div>
 
-          <form className="space-y-5" action={formAction}>
-            {actionState && actionState.message && (
+          <form className="space-y-5" action={formAction} noValidate>
+            {visibleErrorMessage && (
               <div
-                className={`border px-3 py-2 text-sm ${
-                  actionState.success
-                    ? "border-[#CCFF00] text-[#CCFF00]"
-                    : "border-[#ff4444] text-[#ff4444]"
-                }`}
+                className="border border-[#ff4444] px-3 py-2 text-sm text-[#ff4444]"
+                role="alert"
+              >
+                {visibleErrorMessage}
+              </div>
+            )}
+
+            {actionState && actionState.success && actionState.message && (
+              <div
+                className="border border-[#CCFF00] px-3 py-2 text-sm text-[#CCFF00]"
                 role="alert"
               >
                 {actionState.message}

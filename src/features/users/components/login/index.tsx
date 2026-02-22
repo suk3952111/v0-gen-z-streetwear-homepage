@@ -68,7 +68,7 @@ export function LoginView() {
               <p className="text-[#888888] text-sm uppercase tracking-[0.3em] mt-4">{t("subtitle")}</p>
             </div>
 
-            <form className="space-y-6">
+            <form className="space-y-6" noValidate>
               <div>
                 <label className="block text-[#CCFF00] text-sm font-bold uppercase tracking-wider mb-2">{t("email")}</label>
                 <input

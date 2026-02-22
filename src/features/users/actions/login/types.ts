@@ -12,5 +12,6 @@ export type LoginActionState =
   | {
       success: false
       message?: string
+      errorKey?: string
       errors?: Record<string, string[]>
     }

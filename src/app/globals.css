@@ -197,3 +197,39 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Neon themed vertical scrollbar */
+.scrollbar-neon {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-neon::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+@media (min-width: 768px) {
+  .scrollbar-neon {
+    scrollbar-width: thin;
+    scrollbar-color: #ccff00 #111111;
+  }
+
+  .scrollbar-neon::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .scrollbar-neon::-webkit-scrollbar-track {
+    background: #111111;
+    border-left: 1px solid #222222;
+  }
+
+  .scrollbar-neon::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ccff00 0%, #99cc00 100%);
+    border: 2px solid #111111;
+  }
+
+  .scrollbar-neon::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #e5ff66 0%, #b3e600 100%);
+  }
+}

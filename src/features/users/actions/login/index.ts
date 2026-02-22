@@ -18,7 +18,7 @@ export async function loginAction(
   if (!validatedFields.success) {
     return {
       success: false,
-      message: 'Please check your input values',
+      errorKey: 'validation_input',
       errors: validatedFields.error.flatten().fieldErrors,
     }
   }
@@ -39,34 +39,41 @@ export async function loginAction(
       if (errorMessage.includes('invalid login credentials') || errorMessage.includes('invalid credentials')) {
         return {
           success: false,
-          message: 'Invalid email or password',
+          errorKey: 'invalid_credentials',
         }
       }
 
       if (errorMessage.includes('email not confirmed')) {
         return {
           success: false,
-          message: 'Please verify your email before logging in',
+          errorKey: 'email_not_confirmed',
+        }
+      }
+
+      if (errorMessage.includes('too many requests') || errorMessage.includes('rate limit')) {
+        return {
+          success: false,
+          errorKey: 'rate_limited',
         }
       }
 
       if (errorMessage.includes('network')) {
         return {
           success: false,
-          message: 'Network error occurred. Please try again',
+          errorKey: 'network',
         }
       }
 
       return {
         success: false,
-        message: 'Failed to log in. Please try again',
+        errorKey: 'login_failed',
       }
     }
 
     if (!data.user) {
       return {
         success: false,
-        message: 'Failed to log in. User data is missing',
+        errorKey: 'login_failed',
       }
     }
 
@@ -85,7 +92,7 @@ export async function loginAction(
 
     return {
       success: false,
-      message: 'Unexpected error occurred',
+      errorKey: 'unexpected',
     }
   }
 }

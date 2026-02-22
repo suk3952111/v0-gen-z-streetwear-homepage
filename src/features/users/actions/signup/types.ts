@@ -12,5 +12,6 @@ export type SignupActionState =
   | {
       success: false
       message?: string
+      errorKey?: string
       errors?: Record<string, string[]>
     }
