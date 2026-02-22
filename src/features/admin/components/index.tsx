@@ -82,6 +82,7 @@ export function AdminView() {
       </div>
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* TODO: Supabase 기준으로 관리자 대시보드 집계 쿼리로 교체 예정 (현재 mockStats 사용) */}
         <StatCard label={t("stats.sales")} value={formatPrice(mockStats.sales)} />
         <StatCard label={t("stats.orders")} value={mockStats.orders.toString()} />
         <StatCard label={t("stats.pending")} value={mockStats.pending.toString()} />
@@ -101,6 +102,7 @@ export function AdminView() {
               </tr>
             </thead>
             <tbody>
+              {/* TODO: Supabase 기준으로 주문 목록 페이징 조회로 교체 예정 (현재 mockOrders 사용) */}
               {mockOrders.map((order) => (
                 <tr key={order.id} className="border-b border-[#1a1a1a]">
                   <td className="py-3">{order.orderNumber}</td>

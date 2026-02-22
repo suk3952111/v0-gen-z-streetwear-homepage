@@ -25,6 +25,7 @@ export function ShopView() {
     setActiveTags([])
   }
 
+  // TODO: Supabase 기준으로 카테고리/태그/검색 필터를 서버 쿼리로 이관 예정 (현재 mock products를 클라이언트 필터링)
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       if (activeCategory !== "ALL") {

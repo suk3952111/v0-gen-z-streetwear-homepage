@@ -61,6 +61,7 @@ export function ProductDetail({ language, productId }: ProductDetailProps) {
   const [focusIndex, setFocusIndex] = useState(0)
   const [allFocusImages, setAllFocusImages] = useState<FocusImage[]>([])
 
+  // TODO: Supabase 기준으로 상품 단건 조회로 교체 예정 (현재 mock products에서 조회)
   const product = useMemo(() => products.find((p) => p.id === productId), [productId])
 
   const galleryImages = useMemo(() => {
@@ -78,6 +79,7 @@ export function ProductDetail({ language, productId }: ProductDetailProps) {
     }))
   }, [product, galleryImages, productId, t])
 
+  // TODO: Supabase 기준으로 유사 상품 추천 쿼리로 교체 예정 (현재 태그 매칭을 클라이언트 계산)
   const similarProducts = useMemo(() => {
     if (!product) return []
     return products

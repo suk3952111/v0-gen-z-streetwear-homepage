@@ -83,6 +83,7 @@ const content = {
 }
 
 export function ReviewSection({ productId, language, onImageClick }: ReviewSectionProps) {
+  // TODO: Supabase 기준으로 상품별 리뷰 조회로 교체 예정 (현재 mockReviews 사용)
   const [reviews, setReviews] = useState<Review[]>(mockReviews)
   const [isWriting, setIsWriting] = useState(false)
   const [sortBy, setSortBy] = useState<"newest" | "highest" | "lowest" | "helpful">("newest")
@@ -122,6 +123,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
     return imgs
   }, [reviews])
 
+  // TODO: Supabase 기준으로 정렬 옵션을 서버 order by로 이관 예정 (현재 클라이언트 정렬)
   const sortedReviews = [...reviews].sort((a, b) => {
     switch (sortBy) {
       case "newest": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

@@ -27,6 +27,7 @@ export function AccountView() {
   const [activeTab, setActiveTab] = useState<Tab>("profile")
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  // TODO: Supabase 기준으로 사용자 배송지 CRUD 연결 예정 (현재 mockAddresses 기반 상태)
   const [addresses, setAddresses] = useState(mockAddresses)
   const [isAddingAddress, setIsAddingAddress] = useState(false)
   const [editingAddress, setEditingAddress] = useState<string | null>(null)
@@ -51,14 +52,17 @@ export function AccountView() {
     return locale === "KR" ? `${(amount * 1000).toLocaleString()}원` : `$${amount}`
   }
 
+  // TODO: Supabase 기준으로 주소 기본값 업데이트 RPC/쿼리로 교체 예정
   const handleSetDefaultAddress = (id: string) => {
     setAddresses((prev) => prev.map((addr) => ({ ...addr, is_default: addr.id === id })))
   }
 
+  // TODO: Supabase 기준으로 주소 삭제 API 호출로 교체 예정
   const handleDeleteAddress = (id: string) => {
     setAddresses((prev) => prev.filter((addr) => addr.id !== id))
   }
 
+  // TODO: Supabase 기준으로 주소 생성/수정 API 호출로 교체 예정
   const handleSaveAddress = () => {
     if (editingAddress) {
       setAddresses((prev) =>
@@ -366,6 +370,7 @@ export function AccountView() {
               {activeTab === "orders" && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-bold text-white uppercase tracking-wider">{t("orders.title")}</h2>
+                  {/* TODO: Supabase 기준으로 사용자 주문 목록 조회로 교체 예정 (현재 mockOrders 렌더링) */}
                   {mockOrders.length === 0 ? (
                     <div className="text-center py-16 border-4 border-dashed border-[#333333]">
                       <Package className="w-16 h-16 text-[#333333] mx-auto mb-4" />

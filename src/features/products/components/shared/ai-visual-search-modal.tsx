@@ -15,6 +15,7 @@ interface AIVisualSearchModalProps {
 }
 
 const mockResults = getMockVisualSearchResults()
+// TODO: Supabase 기준으로 이미지 임베딩/태그 검색 결과를 조회하도록 교체 예정 (현재 mock 결과 고정)
 
 export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)

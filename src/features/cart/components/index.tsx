@@ -10,6 +10,7 @@ import { NoiseOverlay } from "@/components/ui"
 
 export function CartView() {
   const { locale, t } = useI18n("cart")
+  // TODO: Supabase 기준으로 장바구니 항목 조회/수정 API로 교체 예정 (현재 mock cartItems 상태)
   const [items, setItems] = useState(cartItems)
 
   const updateQuantity = (id: number, delta: number) => {
@@ -132,6 +133,7 @@ export function CartView() {
                     <Sparkles className="w-6 h-6 text-[#CCFF00]" />
                     <h3 className="text-xl font-bold text-[#CCFF00] uppercase tracking-wider">{t("aiAnalyzer")}</h3>
                   </div>
+                  {/* TODO: Supabase 기준으로 개인화 분석 결과 조회로 교체 예정 (현재 vibeCategories mock 사용) */}
                   <p className="text-[#888888] text-sm uppercase tracking-wider mb-4">{t("vibeScore")}</p>
                   <div className="space-y-4">
                     {vibeCategories.map((vibe) => (

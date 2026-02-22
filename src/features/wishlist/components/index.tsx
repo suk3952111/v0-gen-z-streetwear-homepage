@@ -12,10 +12,12 @@ export function WishlistView() {
   const { locale, t } = useI18n("wishlist")
   const { wishlist, removeFromWishlist } = useWishlist()
 
+  // TODO: Supabase 기준으로 위시리스트+상품 조인 조회로 교체 예정 (현재 mock products에서 매칭)
   const wishlistProducts = wishlist
     .map((item) => products.find((p) => p.id === item.product_id))
     .filter(Boolean)
 
+  // TODO: Supabase 기준으로 태그 유사도 추천 쿼리/뷰로 교체 예정 (현재 클라이언트에서 필터/정렬)
   const getRecommendations = () => {
     if (wishlistProducts.length === 0) return []
     const wishlistTags = wishlistProducts.flatMap((p) => p?.tags || [])
