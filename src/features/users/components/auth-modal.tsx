@@ -3,7 +3,9 @@
 import { useActionState, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { X, Eye, EyeOff } from "lucide-react"
+import { APP_URLS } from "@/constants/url"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import { createSupabaseClient } from "@/lib/supabase/client"
 import { loginAction } from "@/features/users/actions/login"
 import { signupAction } from "@/features/users/actions/signup"
 
@@ -21,6 +23,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isGoogleHovered, setIsGoogleHovered] = useState(false)
+  const [isGooglePending, setIsGooglePending] = useState(false)
   const { t } = useI18n("users.auth")
 
   const [loginState, loginFormAction, isLoginPending] = useActionState(loginAction, null)
@@ -29,6 +32,28 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const isPending = mode === "LOGIN" ? isLoginPending : isSignupPending
   const actionState = mode === "LOGIN" ? loginState : signupState
   const formAction = mode === "LOGIN" ? loginFormAction : signupFormAction
+
+  const handleGoogleAuth = async () => {
+    try {
+      setIsGooglePending(true)
+
+      const supabase = createSupabaseClient()
+      const redirectTo = `${window.location.origin}${APP_URLS.authCallback}?next=${encodeURIComponent(APP_URLS.home)}`
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+        },
+      })
+
+      if (error) {
+        setIsGooglePending(false)
+      }
+    } catch {
+      setIsGooglePending(false)
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) {
@@ -208,8 +233,10 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
             <button
               type="button"
+              onClick={handleGoogleAuth}
               onMouseEnter={() => setIsGoogleHovered(true)}
               onMouseLeave={() => setIsGoogleHovered(false)}
+              disabled={isGooglePending}
               className="relative w-full py-3.5 bg-[#0a0a0a] text-[#CCFF00] text-base font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#1a1a1a] transition-colors overflow-hidden"
             >
               <span className="inline-block">{t("google")}</span>

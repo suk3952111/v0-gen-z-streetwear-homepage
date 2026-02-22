@@ -1,19 +1,31 @@
-﻿"use client"
+import { AppShellClient } from "@/components/layout/app-shell-client"
+import { getAuth, getUserById } from "@/features/users/services"
+import { createSupabaseServer } from "@/lib/supabase/server"
 
-import { useState } from "react"
-import { Header } from "@/components/layout/header"
-import { Footer } from "@/components/layout/footer"
-import { AuthModal } from "@/features/users/components/auth-modal"
+type ShellUser = {
+  id: string
+  fullName: string | null
+  role: string | null
+} | null
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+export async function AppShell({ children }: { children: React.ReactNode }) {
+  let currentUser: ShellUser = null
 
-  return (
-    <>
-      <Header onAuthClick={() => setIsAuthModalOpen(true)} />
-      {children}
-      <Footer />
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
-    </>
-  )
+  try {
+    const supabase = await createSupabaseServer()
+    const user = await getAuth(supabase)
+
+    if (user) {
+      const userData = await getUserById(supabase, user.id)
+      currentUser = {
+        id: user.id,
+        fullName: userData?.full_name ?? null,
+        role: userData?.role ?? null,
+      }
+    }
+  } catch {
+    currentUser = null
+  }
+
+  return <AppShellClient currentUser={currentUser}>{children}</AppShellClient>
 }

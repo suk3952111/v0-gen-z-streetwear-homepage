@@ -3,13 +3,38 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Eye, EyeOff } from "lucide-react"
+import { APP_URLS } from "@/constants/url"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import { createSupabaseClient } from "@/lib/supabase/client"
 import { NoiseOverlay } from "@/components/ui"
 
 export function LoginView() {
   const { t } = useI18n("users.login")
   const [showPassword, setShowPassword] = useState(false)
   const [isGoogleHovered, setIsGoogleHovered] = useState(false)
+  const [isGooglePending, setIsGooglePending] = useState(false)
+
+  const handleGoogleAuth = async () => {
+    try {
+      setIsGooglePending(true)
+
+      const supabase = createSupabaseClient()
+      const redirectTo = `${window.location.origin}${APP_URLS.authCallback}?next=${encodeURIComponent(APP_URLS.home)}`
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+        },
+      })
+
+      if (error) {
+        setIsGooglePending(false)
+      }
+    } catch {
+      setIsGooglePending(false)
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
@@ -93,8 +118,10 @@ export function LoginView() {
 
               <button
                 type="button"
+                onClick={handleGoogleAuth}
                 onMouseEnter={() => setIsGoogleHovered(true)}
                 onMouseLeave={() => setIsGoogleHovered(false)}
+                disabled={isGooglePending}
                 className="relative w-full py-4 bg-[#0a0a0a] text-[#CCFF00] text-lg font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#1a1a1a] transition-colors overflow-hidden group"
               >
                 <span className="inline-block transition-transform" style={{ animation: isGoogleHovered ? "glitch 0.3s infinite" : "none" }}>

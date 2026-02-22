@@ -66,6 +66,39 @@ begin
   return new;
 end;
 $$;
+-- auth.users insert -> public.users row upsert
+create or replace function public.handle_auth_user_created()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.users (
+    id,
+    email,
+    full_name,
+    avatar_url,
+    role,
+    is_active
+  )
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name'),
+    new.raw_user_meta_data->>'avatar_url',
+    'customer',
+    true
+  )
+  on conflict (id) do update
+  set
+    email = excluded.email,
+    full_name = coalesce(public.users.full_name, excluded.full_name),
+    avatar_url = coalesce(public.users.avatar_url, excluded.avatar_url);
+
+  return new;
+end;
+$$;
 
 -- =========================================================
 -- 1) auth / users
@@ -443,6 +476,10 @@ drop trigger if exists trg_auth_users_last_sign_in on auth.users;
 create trigger trg_auth_users_last_sign_in
 after update of last_sign_in_at on auth.users
 for each row execute function public.sync_last_sign_in_at();
+drop trigger if exists trg_auth_users_created on auth.users;
+create trigger trg_auth_users_created
+after insert on auth.users
+for each row execute function public.handle_auth_user_created();
 
 -- =========================================================
 -- constraints for business rules

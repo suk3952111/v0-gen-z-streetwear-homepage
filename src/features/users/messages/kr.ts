@@ -98,5 +98,11 @@ export const usersKrMessages = {
       },
     },
     logout: "로그아웃",
+    logoutConfirm: {
+      title: "로그아웃하시겠어요?",
+      description: "언제든 다시 로그인할 수 있습니다.",
+      yes: "예",
+      no: "아니요",
+    },
   },
 } as const

@@ -1,1 +1,2 @@
-﻿export { NoiseOverlay, SectionSurface } from "./noise-overlay"
+export { NoiseOverlay, SectionSurface } from "./noise-overlay"
+export { ConfirmModal } from "./confirm-modal"

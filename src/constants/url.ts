@@ -5,4 +5,5 @@ export const APP_URLS = {
   wishlist: '/wishlist',
   account: '/account',
   login: '/login',
+  authCallback: '/auth/callback',
 } as const

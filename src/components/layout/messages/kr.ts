@@ -12,11 +12,18 @@ export const layoutKrMessages = {
       auth: "로그인 또는 회원가입",
       wishlist: "위시리스트",
       cart: "장바구니",
-      toggleMenu: "메뉴 열기/닫기",
+      toggleMenu: "메뉴 열기 또는 닫기",
+    },
+    logout: "로그아웃",
+    logoutConfirm: {
+      title: "로그아웃하시겠어요?",
+      description: "계정 기능을 이용하려면 다시 로그인해야 합니다.",
+      yes: "예",
+      no: "아니요",
     },
   },
   footer: {
-    tagline: "당신의 에너지에 맞는 AI 스트리트웨어.",
+    tagline: "당신의 에너지와 맞는 AI 스트릿웨어.",
     shop: "쇼핑",
     shopLinks: ["신상품", "상의", "하의", "액세서리"],
     info: "정보",
@@ -29,4 +36,3 @@ export const layoutKrMessages = {
     terms: "이용약관",
   },
 } as const
-

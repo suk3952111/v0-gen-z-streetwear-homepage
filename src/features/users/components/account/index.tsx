@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
 import {
   CheckCircle,
@@ -17,13 +17,16 @@ import {
 } from "lucide-react"
 import { mockAddresses, mockOrders, mockUser } from "@/mocks/account"
 import { useI18n } from "@/lib/i18n/use-i18n"
-import { NoiseOverlay } from "@/components/ui"
+import { ConfirmModal, NoiseOverlay } from "@/components/ui"
+import { logoutAction } from "@/features/users/actions/logout"
 
 type Tab = "profile" | "addresses" | "orders"
 
 export function AccountView() {
   const { locale, t } = useI18n("users.account")
   const [activeTab, setActiveTab] = useState<Tab>("profile")
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const [addresses, setAddresses] = useState(mockAddresses)
   const [isAddingAddress, setIsAddingAddress] = useState(false)
   const [editingAddress, setEditingAddress] = useState<string | null>(null)
@@ -109,6 +112,12 @@ export function AccountView() {
     }
   }
 
+  const handleConfirmLogout = () => {
+    startTransition(async () => {
+      await logoutAction()
+    })
+  }
+
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
       <section className="relative pt-24 pb-20 px-4 md:px-8">
@@ -163,7 +172,11 @@ export function AccountView() {
                     {t("tabs.wishlist")}
                   </Link>
                   <div className="border-t-2 border-[#333333] pt-4 mt-4">
-                    <button className="w-full flex items-center gap-3 px-4 py-3 font-bold uppercase tracking-wider text-[#ff4444] hover:bg-[#1a1a1a] transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => setIsLogoutConfirmOpen(true)}
+                      className="w-full flex items-center gap-3 px-4 py-3 font-bold uppercase tracking-wider text-[#ff4444] hover:bg-[#1a1a1a] transition-colors"
+                    >
                       <LogOut className="w-5 h-5" />
                       {t("logout")}
                     </button>
@@ -410,6 +423,17 @@ export function AccountView() {
           </div>
         </div>
       </section>
+
+      <ConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        title={t("logoutConfirm.title")}
+        description={t("logoutConfirm.description")}
+        confirmLabel={t("logoutConfirm.yes")}
+        cancelLabel={t("logoutConfirm.no")}
+        isLoading={isPending}
+        onCancel={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={handleConfirmLogout}
+      />
     </main>
   )
 }

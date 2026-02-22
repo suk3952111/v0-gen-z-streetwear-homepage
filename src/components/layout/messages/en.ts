@@ -14,6 +14,13 @@ export const layoutEnMessages = {
       cart: "Shopping cart",
       toggleMenu: "Toggle menu",
     },
+    logout: "LOGOUT",
+    logoutConfirm: {
+      title: "Sign out now?",
+      description: "You will need to sign in again to access your account.",
+      yes: "YES",
+      no: "NO",
+    },
   },
   footer: {
     tagline: "AI-powered streetwear that matches your energy. Built different.",
@@ -29,4 +36,3 @@ export const layoutEnMessages = {
     terms: "Terms",
   },
 } as const
-

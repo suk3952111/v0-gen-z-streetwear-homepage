@@ -98,5 +98,11 @@ export const usersEnMessages = {
       },
     },
     logout: "LOGOUT",
+    logoutConfirm: {
+      title: "Sign out now?",
+      description: "You can sign back in anytime with your account.",
+      yes: "YES",
+      no: "NO",
+    },
   },
 } as const
