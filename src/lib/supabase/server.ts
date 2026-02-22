@@ -24,7 +24,7 @@ export async function createSupabaseServer() {
             cookieStore.set(name, value, options)
           })
         } catch {
-          // Server Components may call this where setting cookies is not available.
+          // 서버 컴포넌트에서는 쿠키 설정이 불가능한 컨텍스트에서 호출될 수 있습니다.
         }
       },
     },

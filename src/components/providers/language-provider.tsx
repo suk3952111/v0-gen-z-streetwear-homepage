@@ -16,7 +16,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>("EN")
   const [mounted, setMounted] = useState(false)
 
-  // Load saved language preference on mount
+  // 마운트 시 저장된 언어 설정을 불러옵니다.
   useEffect(() => {
     const saved = localStorage.getItem("vibe-check-lang") as Language | null
     if (saved && (saved === "EN" || saved === "KR")) {
@@ -25,7 +25,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setMounted(true)
   }, [])
 
-  // Save language preference when it changes
+  // 언어 설정이 변경되면 저장합니다.
   useEffect(() => {
     if (mounted) {
       localStorage.setItem("vibe-check-lang", language)

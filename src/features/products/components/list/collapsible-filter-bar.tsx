@@ -39,12 +39,12 @@ export function CollapsibleFilterBar({
     const currentScrollY = window.scrollY
 
     if (manualOverride !== null) {
-      // If user manually toggled, keep that state until they scroll past threshold in the opposite direction
+      // 사용자가 수동으로 토글한 경우, 반대 방향으로 임계값을 넘겨 스크롤할 때까지 상태를 유지
       if (manualOverride && currentScrollY < 50) {
-        // User manually expanded and scrolled back to top - release override
+        // 수동 확장 후 다시 상단으로 스크롤하면 수동 상태 해제
         setManualOverride(null)
       } else if (!manualOverride && currentScrollY > lastScrollY.current + 80) {
-        // User manually collapsed and kept scrolling down - release override
+        // 수동 축소 후 계속 아래로 스크롤하면 수동 상태 해제
         setManualOverride(null)
       }
       lastScrollY.current = currentScrollY
@@ -84,7 +84,7 @@ export function CollapsibleFilterBar({
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8">
-        {/* Page Title - hidden when collapsed */}
+        {/* 페이지 제목 - 접힌 상태에서는 숨김 */}
         <AnimatePresence initial={false}>
           {!collapsed && (
             <motion.div
@@ -104,7 +104,7 @@ export function CollapsibleFilterBar({
           )}
         </AnimatePresence>
 
-        {/* Search Bar - shrinks when collapsed */}
+        {/* 검색 바 - 접히면 축소 */}
         <motion.div
           className="relative"
           animate={{ marginBottom: collapsed ? 8 : 24 }}
@@ -140,7 +140,7 @@ export function CollapsibleFilterBar({
           )}
         </motion.div>
 
-        {/* Category Tabs - horizontal scroll when collapsed, wrap when expanded */}
+        {/* 카테고리 탭 - 접히면 가로 스크롤, 펼치면 줄바꿈 */}
         <motion.div
           className={`${
             collapsed
@@ -178,7 +178,7 @@ export function CollapsibleFilterBar({
           })}
         </motion.div>
 
-        {/* Tag Filters - horizontal scroll when collapsed, wrap when expanded */}
+        {/* 태그 필터 - 접히면 가로 스크롤, 펼치면 줄바꿈 */}
         <motion.div
           className={`${
             collapsed
@@ -214,7 +214,7 @@ export function CollapsibleFilterBar({
         </motion.div>
       </div>
 
-      {/* Manual Toggle Button */}
+      {/* 수동 토글 버튼 */}
       <button
         onClick={toggleManual}
         className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-50 w-8 h-8 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00] flex items-center justify-center hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors"
@@ -228,7 +228,7 @@ export function CollapsibleFilterBar({
         </motion.div>
       </button>
 
-      {/* Hide scrollbar for webkit browsers */}
+      {/* 웹킷 브라우저용 스크롤바 숨김 */}
       <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;

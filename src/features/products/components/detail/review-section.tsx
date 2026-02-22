@@ -87,7 +87,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
   const [isWriting, setIsWriting] = useState(false)
   const [sortBy, setSortBy] = useState<"newest" | "highest" | "lowest" | "helpful">("newest")
 
-  // Form state
+  // 폼 상태
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [title, setTitle] = useState("")
@@ -101,7 +101,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : "0.0"
 
-  // Collect all review images with context for the focus-mode gallery
+  // 포커스 모드 갤러리용 리뷰 이미지와 컨텍스트를 수집
   const allReviewFocusImages: FocusImage[] = useMemo(() => {
     const imgs: FocusImage[] = []
     reviews.forEach((review) => {
@@ -176,7 +176,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
     )
   }
 
-  // Handle clicking a review image -- find its global index
+  // 리뷰 이미지를 클릭하면 전체 배열 기준 인덱스를 계산
   const handleReviewImageClick = (reviewId: string, imgIdx: number) => {
     if (!onImageClick) return
     const globalIdx = allReviewFocusImages.findIndex(
@@ -187,7 +187,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
 
   return (
     <section className="px-4 md:px-8 py-16 max-w-7xl mx-auto">
-      {/* Section Header */}
+      {/* 섹션 헤더 */}
       <div className="border-b-4 border-[#CCFF00] pb-4 mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <h2 className="text-3xl md:text-5xl font-bold text-white uppercase tracking-tighter">
@@ -210,7 +210,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
         </div>
       </div>
 
-      {/* Customer Photos Strip - clickable */}
+      {/* 고객 사진 스트립 - 클릭 가능 */}
       {allReviewFocusImages.length > 0 && (
         <div className="mb-10">
           <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-4">{t.customerPhotos}</h3>
@@ -235,7 +235,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
         </div>
       )}
 
-      {/* Write Review Button / Form */}
+      {/* 리뷰 작성 버튼 / 폼 */}
       {!isWriting ? (
         <button
           onClick={() => setIsWriting(true)}
@@ -245,7 +245,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="mb-12 border-4 border-[#CCFF00] p-6 bg-[#0a0a0a]">
-          {/* Rating */}
+          {/* 평점 */}
           <div className="mb-6">
             <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">{t.ratingLabel} *</label>
             <div className="flex gap-2">
@@ -263,17 +263,17 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
               ))}
             </div>
           </div>
-          {/* Title */}
+          {/* 제목 */}
           <div className="mb-6">
             <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">{t.titleLabel}</label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t.titlePlaceholder} className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white placeholder-[#666666] focus:border-[#CCFF00] focus:outline-none uppercase" />
           </div>
-          {/* Content */}
+          {/* 내용 */}
           <div className="mb-6">
             <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">{t.contentLabel} *</label>
             <textarea value={reviewContent} onChange={(e) => setReviewContent(e.target.value)} placeholder={t.contentPlaceholder} rows={4} className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white placeholder-[#666666] focus:border-[#CCFF00] focus:outline-none resize-none" />
           </div>
-          {/* Image Upload */}
+          {/* 이미지 업로드 */}
           <div className="mb-6">
             <label className="block text-white text-sm font-bold uppercase tracking-wider mb-3">{t.imagesLabel}</label>
             <p className="text-[#888888] text-xs mb-3">{t.imagesHint}</p>
@@ -294,7 +294,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
           </div>
-          {/* Buttons */}
+          {/* 버튼 */}
           <div className="flex gap-4">
             <button type="submit" disabled={rating === 0 || !reviewContent.trim()} className="px-8 py-3 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {t.submit}
@@ -306,7 +306,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
         </form>
       )}
 
-      {/* Sort Options */}
+      {/* 정렬 옵션 */}
       {reviews.length > 0 && (
         <div className="flex items-center gap-4 mb-8 flex-wrap">
           <span className="text-[#888888] text-sm uppercase tracking-wider">{t.sortBy}:</span>
@@ -333,7 +333,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
         </div>
       )}
 
-      {/* Reviews List */}
+      {/* 리뷰 목록 */}
       {reviews.length === 0 ? (
         <div className="text-center py-16 border-4 border-dashed border-[#333333]">
           <Star className="w-16 h-16 text-[#333333] mx-auto mb-4" />
@@ -344,7 +344,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
         <div className="space-y-6">
           {sortedReviews.map((review) => (
             <div key={review.id} className="border-4 border-[#333333] hover:border-[#CCFF00] transition-colors p-6">
-              {/* Review Header */}
+              {/* 리뷰 헤더 */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-[#1a1a1a] border-2 border-[#CCFF00] flex items-center justify-center">
@@ -375,7 +375,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
               )}
               <p className="text-white leading-relaxed mb-4">{review.content}</p>
 
-              {/* Review Images - Clickable */}
+              {/* 리뷰 이미지 - 클릭 가능 */}
               {review.images.length > 0 && (
                 <div className="flex gap-3 mb-4">
                   {review.images.map((img, imgIdx) => (

@@ -22,7 +22,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlist, setWishlist] = useState<WishlistItem[]>([])
   const [mounted, setMounted] = useState(false)
 
-  // Load wishlist from localStorage on mount
+  // 마운트 시 localStorage에서 위시리스트를 불러옵니다.
   useEffect(() => {
     const saved = localStorage.getItem("vibe-check-wishlist")
     if (saved) {
@@ -35,7 +35,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     setMounted(true)
   }, [])
 
-  // Save wishlist when it changes
+  // 위시리스트가 변경되면 localStorage에 저장합니다.
   useEffect(() => {
     if (mounted) {
       localStorage.setItem("vibe-check-wishlist", JSON.stringify(wishlist))

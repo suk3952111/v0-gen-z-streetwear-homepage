@@ -46,7 +46,7 @@ export function ImageFocusModal({
     }
   }, [currentIndex, onNavigate])
 
-  // Keyboard navigation
+  // 키보드 네비게이션
   useEffect(() => {
     if (!isOpen) return
 
@@ -65,7 +65,7 @@ export function ImageFocusModal({
     }
 
     window.addEventListener("keydown", handleKeyDown)
-    // Prevent body scroll when modal is open
+    // 모달이 열려 있는 동안 본문 스크롤을 막습니다.
     document.body.style.overflow = "hidden"
 
     return () => {
@@ -85,7 +85,7 @@ export function ImageFocusModal({
           className="fixed inset-0 z-[9999] flex items-center justify-center"
           onClick={onClose}
         >
-          {/* Backdrop */}
+          {/* 배경 오버레이 */}
           <motion.div
             initial={{ backdropFilter: "blur(0px)" }}
             animate={{ backdropFilter: "blur(24px)" }}
@@ -94,7 +94,7 @@ export function ImageFocusModal({
             className="absolute inset-0 bg-black/60"
           />
 
-          {/* Close Button */}
+          {/* 닫기 버튼 */}
           <motion.button
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -110,7 +110,7 @@ export function ImageFocusModal({
             <X className="w-6 h-6" />
           </motion.button>
 
-          {/* Previous Button */}
+          {/* 이전 버튼 */}
           {currentIndex > 0 && (
             <motion.button
               initial={{ opacity: 0, x: -20 }}
@@ -128,7 +128,7 @@ export function ImageFocusModal({
             </motion.button>
           )}
 
-          {/* Next Button */}
+          {/* 다음 버튼 */}
           {currentIndex < images.length - 1 && (
             <motion.button
               initial={{ opacity: 0, x: 20 }}
@@ -146,7 +146,7 @@ export function ImageFocusModal({
             </motion.button>
           )}
 
-          {/* Main Image Container */}
+          {/* 메인 이미지 컨테이너 */}
           <div
             className="relative z-[1] flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
@@ -173,7 +173,7 @@ export function ImageFocusModal({
                 priority
               />
 
-              {/* Scan line overlay for product images */}
+              {/* 상품 이미지용 스캔 라인 오버레이 */}
               {currentImage.type === "product" && (
                 <div className="absolute inset-0 pointer-events-none overflow-hidden">
                   <div
@@ -184,7 +184,7 @@ export function ImageFocusModal({
               )}
             </motion.div>
 
-            {/* Review Context Overlay */}
+            {/* 리뷰 컨텍스트 오버레이 */}
             <AnimatePresence mode="wait">
               {currentImage.type === "review" && currentImage.reviewContext && (
                 <motion.div
@@ -220,7 +220,7 @@ export function ImageFocusModal({
               )}
             </AnimatePresence>
 
-            {/* Pagination Indicator */}
+            {/* 페이지네이션 표시 */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -232,7 +232,7 @@ export function ImageFocusModal({
                 {currentIndex + 1} / {images.length}
               </span>
 
-              {/* Dot indicators */}
+              {/* 점 인디케이터 */}
               <div className="flex gap-1.5">
                 {images.map((_, idx) => (
                   <button

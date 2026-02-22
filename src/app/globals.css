@@ -23,24 +23,24 @@
   --border: #CCFF00;
   --input: #1a1a1a;
   --ring: #CCFF00;
-  --neon: #CCFF00; /* Preserve existing neon variable */
-  --radius: 0.625rem; /* Updated from diff */
-  --chart-1: oklch(0.646 0.222 41.116); /* Added from diff */
-  --chart-2: oklch(0.6 0.118 184.704); /* Added from diff */
-  --chart-3: oklch(0.398 0.07 227.392); /* Added from diff */
-  --chart-4: oklch(0.828 0.189 84.429); /* Added from diff */
-  --chart-5: oklch(0.769 0.188 70.08); /* Added from diff */
-  --sidebar: oklch(0.985 0 0); /* Added from diff */
-  --sidebar-foreground: oklch(0.145 0 0); /* Added from diff */
-  --sidebar-primary: oklch(0.205 0 0); /* Added from diff */
-  --sidebar-primary-foreground: oklch(0.985 0 0); /* Added from diff */
-  --sidebar-accent: oklch(0.97 0 0); /* Added from diff */
-  --sidebar-accent-foreground: oklch(0.205 0 0); /* Added from diff */
-  --sidebar-border: oklch(0.922 0 0); /* Added from diff */
-  --sidebar-ring: oklch(0.708 0 0); /* Added from diff */
+  --neon: #CCFF00; /* 기존 네온 변수 유지 */
+  --radius: 0.625rem; /* diff 기준으로 수정 */
+  --chart-1: oklch(0.646 0.222 41.116); /* diff 기준으로 추가 */
+  --chart-2: oklch(0.6 0.118 184.704); /* diff 기준으로 추가 */
+  --chart-3: oklch(0.398 0.07 227.392); /* diff 기준으로 추가 */
+  --chart-4: oklch(0.828 0.189 84.429); /* diff 기준으로 추가 */
+  --chart-5: oklch(0.769 0.188 70.08); /* diff 기준으로 추가 */
+  --sidebar: oklch(0.985 0 0); /* diff 기준으로 추가 */
+  --sidebar-foreground: oklch(0.145 0 0); /* diff 기준으로 추가 */
+  --sidebar-primary: oklch(0.205 0 0); /* diff 기준으로 추가 */
+  --sidebar-primary-foreground: oklch(0.985 0 0); /* diff 기준으로 추가 */
+  --sidebar-accent: oklch(0.97 0 0); /* diff 기준으로 추가 */
+  --sidebar-accent-foreground: oklch(0.205 0 0); /* diff 기준으로 추가 */
+  --sidebar-border: oklch(0.922 0 0); /* diff 기준으로 추가 */
+  --sidebar-ring: oklch(0.708 0 0); /* diff 기준으로 추가 */
 }
 
-.dark { /* Added from diff */
+.dark { /* diff 기준으로 추가 */
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.145 0 0);
@@ -76,8 +76,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Space Grotesk', 'Space Grotesk Fallback', sans-serif; /* Preserve existing font */
-  --font-mono: 'Space Grotesk', monospace; /* Preserve existing font */
+  --font-sans: 'Space Grotesk', 'Space Grotesk Fallback', sans-serif; /* 기존 폰트 유지 */
+  --font-mono: 'Space Grotesk', monospace; /* 기존 폰트 유지 */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -97,24 +97,24 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-neon: var(--neon); /* Preserve existing neon mapping */
-  --color-chart-1: var(--chart-1); /* Added from diff */
-  --color-chart-2: var(--chart-2); /* Added from diff */
-  --color-chart-3: var(--chart-3); /* Added from diff */
-  --color-chart-4: var(--chart-4); /* Added from diff */
-  --color-chart-5: var(--chart-5); /* Added from diff */
-  --radius-sm: calc(var(--radius) - 4px); /* Updated from diff */
-  --radius-md: calc(var(--radius) - 2px); /* Updated from diff */
-  --radius-lg: var(--radius); /* Updated from diff */
-  --radius-xl: calc(var(--radius) + 4px); /* Updated from diff */
-  --color-sidebar: var(--sidebar); /* Added from diff */
-  --color-sidebar-foreground: var(--sidebar-foreground); /* Added from diff */
-  --color-sidebar-primary: var(--sidebar-primary); /* Added from diff */
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground); /* Added from diff */
-  --color-sidebar-accent: var(--sidebar-accent); /* Added from diff */
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground); /* Added from diff */
-  --color-sidebar-border: var(--sidebar-border); /* Added from diff */
-  --color-sidebar-ring: var(--sidebar-ring); /* Added from diff */
+  --color-neon: var(--neon); /* 기존 네온 매핑 유지 */
+  --color-chart-1: var(--chart-1); /* diff 기준으로 추가 */
+  --color-chart-2: var(--chart-2); /* diff 기준으로 추가 */
+  --color-chart-3: var(--chart-3); /* diff 기준으로 추가 */
+  --color-chart-4: var(--chart-4); /* diff 기준으로 추가 */
+  --color-chart-5: var(--chart-5); /* diff 기준으로 추가 */
+  --radius-sm: calc(var(--radius) - 4px); /* diff 기준으로 수정 */
+  --radius-md: calc(var(--radius) - 2px); /* diff 기준으로 수정 */
+  --radius-lg: var(--radius); /* diff 기준으로 수정 */
+  --radius-xl: calc(var(--radius) + 4px); /* diff 기준으로 수정 */
+  --color-sidebar: var(--sidebar); /* diff 기준으로 추가 */
+  --color-sidebar-foreground: var(--sidebar-foreground); /* diff 기준으로 추가 */
+  --color-sidebar-primary: var(--sidebar-primary); /* diff 기준으로 추가 */
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground); /* diff 기준으로 추가 */
+  --color-sidebar-accent: var(--sidebar-accent); /* diff 기준으로 추가 */
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground); /* diff 기준으로 추가 */
+  --color-sidebar-border: var(--sidebar-border); /* diff 기준으로 추가 */
+  --color-sidebar-ring: var(--sidebar-ring); /* diff 기준으로 추가 */
 }
 
 @keyframes pulse-glow {
@@ -189,7 +189,7 @@
   }
 }
 
-/* Hide scrollbar for horizontal scroll sections */
+/* 가로 스크롤 영역의 스크롤바 숨김 */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -198,7 +198,7 @@
   display: none;
 }
 
-/* Neon themed vertical scrollbar */
+/* 네온 테마 세로 스크롤바 */
 .scrollbar-neon {
   -ms-overflow-style: none;
   scrollbar-width: none;

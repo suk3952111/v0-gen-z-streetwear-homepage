@@ -12,7 +12,7 @@ export interface Product {
 }
 
 export const products: Product[] = [
-  // HOODIES (12 items)
+  // 후디 (12개)
   {
     id: "hoodie-001",
     name: "사이버 후디 3000",
@@ -134,7 +134,7 @@ export const products: Product[] = [
     tags: ["#Retro", "#Y2K", "#Street"]
   },
 
-  // JACKETS / OUTERWEAR (12 items)
+  // 재킷 / 아우터 (12개)
   {
     id: "jacket-001",
     name: "VOID PUFFER JACKET",
@@ -256,7 +256,7 @@ export const products: Product[] = [
     tags: ["#Minimal", "#Street", "#Techwear"]
   },
 
-  // TOPS (15 items)
+  // 상의 (15개)
   {
     id: "top-001",
     name: "네온 오버사이즈 티",
@@ -408,7 +408,7 @@ export const products: Product[] = [
     tags: ["#Neon", "#Techwear", "#Street"]
   },
 
-  // BOTTOMS (12 items)
+  // 하의 (12개)
   {
     id: "bottom-001",
     name: "GLITCH CARGO PANTS",
@@ -530,7 +530,7 @@ export const products: Product[] = [
     tags: ["#Retro", "#Street", "#Oversized"]
   },
 
-  // ACCESSORIES (15 items)
+  // 액세서리 (15개)
   {
     id: "acc-001",
     name: "바이너리 비니",
