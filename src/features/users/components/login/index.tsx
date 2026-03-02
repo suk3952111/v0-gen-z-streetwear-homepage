@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { Eye, EyeOff } from "lucide-react"
 import { APP_URLS } from "@/constants/url"
 import { useI18n } from "@/lib/i18n/use-i18n"
@@ -10,6 +11,7 @@ import { NoiseOverlay } from "@/components/ui"
 
 export function LoginView() {
   const { t } = useI18n("users.login")
+  const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
   const [isGoogleHovered, setIsGoogleHovered] = useState(false)
   const [isGooglePending, setIsGooglePending] = useState(false)
@@ -19,7 +21,10 @@ export function LoginView() {
       setIsGooglePending(true)
 
       const supabase = createSupabaseClient()
-      const redirectTo = `${window.location.origin}${APP_URLS.authCallback}?next=${encodeURIComponent(APP_URLS.home)}`
+      const rawNext = searchParams.get("next")
+      const nextPath =
+        rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : APP_URLS.home
+      const redirectTo = `${window.location.origin}${APP_URLS.authCallback}?next=${encodeURIComponent(nextPath)}`
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
