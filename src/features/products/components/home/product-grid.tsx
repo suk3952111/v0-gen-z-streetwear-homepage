@@ -2,12 +2,15 @@
 
 import Link from "next/link"
 import { ProductCard } from "@/features/products/components/shared/product-card"
-import { products as allProducts } from "@/lib/products"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import type { ShopProductItem } from "@/features/products/types/shop"
 
-const products = allProducts.slice(0, 8)
+type ProductGridProps = {
+  products: ShopProductItem[]
+  language?: "EN" | "KR"
+}
 
-export function ProductGrid({ language }: { language?: "EN" | "KR" }) {
+export function ProductGrid({ products }: ProductGridProps) {
   const { locale, t } = useI18n("products.home.grid")
 
   return (
@@ -30,7 +33,7 @@ export function ProductGrid({ language }: { language?: "EN" | "KR" }) {
             key={product.id}
             id={product.id}
             name={product.name}
-            price={locale === "KR" ? product.price : product.priceUSD}
+            price={locale === "KR" ? product.priceKRW : product.priceUSD}
             aiMatch={product.aiMatch}
             image={product.image}
             category={product.category[locale]}
