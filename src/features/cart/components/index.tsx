@@ -1,28 +1,162 @@
-﻿"use client"
+"use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Minus, Plus, Sparkles, X } from "lucide-react"
-import { cartItems, vibeCategories } from "@/mocks/cart"
+import { vibeCategories } from "@/mocks/cart"
+import { products as mockProducts } from "@/features/products/mocks/products"
 import { useI18n } from "@/lib/i18n/use-i18n"
 import { NoiseOverlay } from "@/components/ui"
+import { createSupabaseClient } from "@/lib/supabase/client"
+import {
+  getCartItemsByUserId,
+  removeCartItem,
+  updateCartItemQuantity,
+} from "@/features/cart/services"
+
+type CartEntry = {
+  key: string
+  productId: string
+  quantity: number
+  size: string
+  dbId?: string
+}
+
+const LOCAL_CART_KEY = "vibe-check-cart"
+const DEFAULT_LOCAL_CART: CartEntry[] = [
+  { key: "hoodie-001", productId: "hoodie-001", quantity: 1, size: "L" },
+  { key: "bottom-001", productId: "bottom-001", quantity: 2, size: "M" },
+  { key: "acc-001", productId: "acc-001", quantity: 1, size: "ONE SIZE" },
+]
 
 export function CartView() {
   const { locale, t } = useI18n("cart")
-  // TODO: Supabase 기준으로 장바구니 항목 조회/수정 API로 교체 예정 (현재 mock cartItems 상태)
-  const [items, setItems] = useState(cartItems)
+  const supabase = useMemo(() => createSupabaseClient(), [])
+  const [storageMode, setStorageMode] = useState<"local" | "supabase">("local")
+  const [entries, setEntries] = useState<CartEntry[]>([])
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-  const updateQuantity = (id: number, delta: number) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item,
-      ),
+  const loadLocalCart = useCallback(() => {
+    const saved = localStorage.getItem(LOCAL_CART_KEY)
+    if (!saved) {
+      setEntries(DEFAULT_LOCAL_CART)
+      return
+    }
+    try {
+      setEntries(JSON.parse(saved) as CartEntry[])
+    } catch {
+      setEntries(DEFAULT_LOCAL_CART)
+    }
+  }, [])
+
+  const loadSupabaseCart = useCallback(
+    async (userId: string) => {
+      try {
+        const rows = await getCartItemsByUserId(supabase, userId)
+        setEntries(rows)
+      } catch {
+        setEntries([])
+      }
+    },
+    [supabase],
+  )
+
+  useEffect(() => {
+    let isActive = true
+
+    const initialize = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!isActive) return
+
+      if (!user) {
+        setStorageMode("local")
+        setCurrentUserId(null)
+        loadLocalCart()
+        return
+      }
+
+      setStorageMode("supabase")
+      setCurrentUserId(user.id)
+      await loadSupabaseCart(user.id)
+    }
+
+    initialize()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const user = session?.user ?? null
+      if (!user) {
+        setStorageMode("local")
+        setCurrentUserId(null)
+        loadLocalCart()
+        return
+      }
+
+      setStorageMode("supabase")
+      setCurrentUserId(user.id)
+      await loadSupabaseCart(user.id)
+    })
+
+    return () => {
+      isActive = false
+      subscription.unsubscribe()
+    }
+  }, [loadLocalCart, loadSupabaseCart, supabase])
+
+  useEffect(() => {
+    if (storageMode === "local") {
+      localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(entries))
+    }
+  }, [entries, storageMode])
+
+  const items = useMemo(() => {
+    return entries
+      .map((entry) => {
+        const product = mockProducts.find((p) => p.id === entry.productId)
+        if (!product) return null
+        const vibeTag = product.tags[0]?.replace("#", "").toUpperCase() ?? "VIBE"
+        return {
+          id: entry.key,
+          dbId: entry.dbId,
+          productId: entry.productId,
+          name: product.name.includes("?") ? entry.productId.replace(/-/g, " ").toUpperCase() : product.name,
+          price: product.priceUSD,
+          priceKRW: product.price,
+          size: entry.size,
+          quantity: entry.quantity,
+          image: product.image,
+          vibeTag,
+        }
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+  }, [entries])
+
+  const updateQuantity = async (id: string, delta: number) => {
+    const current = entries.find((entry) => entry.key === id)
+    if (!current) return
+    const nextQuantity = Math.max(1, current.quantity + delta)
+
+    setEntries((prev) =>
+      prev.map((entry) => (entry.key === id ? { ...entry, quantity: nextQuantity } : entry)),
     )
+
+    if (storageMode === "supabase" && current.dbId && currentUserId) {
+      await updateCartItemQuantity(supabase, current.dbId, currentUserId, nextQuantity)
+    }
   }
 
-  const removeItem = (id: number) => {
-    setItems((prev) => prev.filter((item) => item.id !== id))
+  const removeItem = async (id: string) => {
+    const current = entries.find((entry) => entry.key === id)
+    setEntries((prev) => prev.filter((entry) => entry.key !== id))
+
+    if (storageMode === "supabase" && current?.dbId && currentUserId) {
+      await removeCartItem(supabase, current.dbId, currentUserId)
+    }
   }
 
   const formatPrice = (usd: number, krw: number) => {
@@ -133,7 +267,6 @@ export function CartView() {
                     <Sparkles className="w-6 h-6 text-[#CCFF00]" />
                     <h3 className="text-xl font-bold text-[#CCFF00] uppercase tracking-wider">{t("aiAnalyzer")}</h3>
                   </div>
-                  {/* TODO: Supabase 기준으로 개인화 분석 결과 조회로 교체 예정 (현재 vibeCategories mock 사용) */}
                   <p className="text-[#888888] text-sm uppercase tracking-wider mb-4">{t("vibeScore")}</p>
                   <div className="space-y-4">
                     {vibeCategories.map((vibe) => (
@@ -208,24 +341,6 @@ export function CartView() {
                     </div>
                   </div>
 
-                  <div className="px-6 pb-6">
-                    <div className="bg-white p-4">
-                      <div className="flex items-end justify-center gap-[2px] h-16">
-                        {Array.from({ length: 50 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className="bg-black"
-                            style={{
-                              width: Math.random() > 0.5 ? "2px" : "4px",
-                              height: `${60 + Math.random() * 40}%`,
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-center text-black text-xs font-mono mt-2">{orderNumber}</p>
-                    </div>
-                  </div>
-
                   <div className="p-6 pt-0 space-y-4">
                     <button className="w-full py-4 bg-[#CCFF00] text-[#0a0a0a] text-xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors">
                       {t("checkout")}
@@ -246,4 +361,3 @@ export function CartView() {
     </main>
   )
 }
-

@@ -1,11 +1,11 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { APP_URLS } from "@/constants/url"
+import { ADMIN_REQUIRED_PREFIXES, AUTH_REQUIRED_PREFIXES, USER_ROLES } from "@/constants/auth"
+import { getUserRoleById } from "@/features/users/services/get-user-role-by-id"
 
-const AUTH_REQUIRED_PREFIXES = ["/account", "/wishlist", "/cart", "/admin"] as const
-const ADMIN_REQUIRED_PREFIXES = ["/admin"] as const
-const LOGIN_PATH = "/login"
-const HOME_PATH = "/"
-const PLATFORM_ADMIN_ROLE = "platform_admin"
+const LOGIN_PATH = APP_URLS.login
+const HOME_PATH = APP_URLS.home
 
 function matchesPrefix(pathname: string, prefixes: readonly string[]) {
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
@@ -45,11 +45,13 @@ export async function proxy(request: NextRequest) {
 
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (userError || !user) {
     const loginUrl = new URL(LOGIN_PATH, request.url)
-    loginUrl.searchParams.set("next", pathname)
+    const nextPath = `${pathname}${request.nextUrl.search}`
+    loginUrl.searchParams.set("next", nextPath)
     return NextResponse.redirect(loginUrl)
   }
 
@@ -57,9 +59,13 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
-  const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+  try {
+    const role = await getUserRoleById(supabase, user.id)
 
-  if (profile?.role !== PLATFORM_ADMIN_ROLE) {
+    if (role !== USER_ROLES.platformAdmin) {
+      return NextResponse.redirect(new URL(HOME_PATH, request.url))
+    }
+  } catch {
     return NextResponse.redirect(new URL(HOME_PATH, request.url))
   }
 
