@@ -6,6 +6,7 @@ import { useState, useTransition } from "react"
 import { ConfirmModal } from "@/components/ui"
 import { logoutAction } from "@/features/users/actions/logout"
 import { useWishlist } from "@/components/providers/wishlist-provider"
+import { useCart } from "@/components/providers/cart-provider"
 import { useI18n } from "@/lib/i18n/use-i18n"
 
 interface HeaderProps {
@@ -24,6 +25,7 @@ export function Header({ onAuthClick, currentUser }: HeaderProps) {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const { wishlistCount } = useWishlist()
+  const { cartCount } = useCart()
   const { locale, setLocale, t } = useI18n("layout.header")
 
   const handleConfirmLogout = () => {
@@ -127,9 +129,11 @@ export function Header({ onAuthClick, currentUser }: HeaderProps) {
             aria-label={t("aria.cart")}
           >
             <ShoppingBag className="w-6 h-6" />
-            <span className="absolute -top-2 -right-2 w-5 h-5 bg-[#CCFF00] text-[#0a0a0a] text-xs font-bold flex items-center justify-center">
-              3
-            </span>
+            {cartCount > 0 && (
+              <span className="absolute -top-2 -right-2 w-5 h-5 bg-[#CCFF00] text-[#0a0a0a] text-xs font-bold flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
           </Link>
 
           <button

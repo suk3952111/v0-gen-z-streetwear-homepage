@@ -4,6 +4,7 @@ import { Space_Grotesk } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { LanguageProvider } from '@/components/providers/language-provider'
 import { WishlistProvider } from '@/components/providers/wishlist-provider'
+import { CartProvider } from '@/components/providers/cart-provider'
 import './globals.css'
 import { AppShell } from '@/components/layout/app-shell'
 
@@ -45,7 +46,9 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <LanguageProvider>
           <WishlistProvider>
-            <AppShell>{children}</AppShell>
+            <CartProvider>
+              <AppShell>{children}</AppShell>
+            </CartProvider>
           </WishlistProvider>
         </LanguageProvider>
         <Analytics />

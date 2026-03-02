@@ -12,3 +12,4 @@ export const removeCartItem = async (
     throw new Error(`Cart 삭제 실패: ${error.message}`)
   }
 }
+

@@ -9,6 +9,7 @@ import { products, type Language, type Product } from "@/lib/products"
 import { ReviewSection } from "./review-section"
 import { ImageFocusModal, type FocusImage } from "./image-focus-modal"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import { useCart } from "@/components/providers/cart-provider"
 
 interface ProductDetailProps {
   language?: Language
@@ -52,6 +53,7 @@ function generateGalleryImages(product: Product): string[] {
 
 export function ProductDetail({ language, productId }: ProductDetailProps) {
   const { locale, t } = useI18n("products.detail")
+  const { addToCart } = useCart()
   const currentLanguage: Language = language ?? locale
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
@@ -106,6 +108,11 @@ export function ProductDetail({ language, productId }: ProductDetailProps) {
     setFocusIndex(productFocusImages.length + startIndex)
     setFocusOpen(true)
   }, [productFocusImages])
+
+  const handleAddToCart = async () => {
+    if (!selectedSize || !product) return
+    await addToCart(product.id, { quantity, size: selectedSize })
+  }
 
   if (!product) {
     return (
@@ -196,7 +203,12 @@ export function ProductDetail({ language, productId }: ProductDetailProps) {
               </div>
             </div>
 
-            <button className="w-full py-6 bg-[#CCFF00] text-[#0a0a0a] text-2xl md:text-3xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-all hover:shadow-[8px_8px_0px_#CCFF00]" disabled={!selectedSize} style={{ opacity: selectedSize ? 1 : 0.6, cursor: selectedSize ? "pointer" : "not-allowed" }}>
+            <button
+              onClick={() => void handleAddToCart()}
+              className="w-full py-6 bg-[#CCFF00] text-[#0a0a0a] text-2xl md:text-3xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-all hover:shadow-[8px_8px_0px_#CCFF00]"
+              disabled={!selectedSize}
+              style={{ opacity: selectedSize ? 1 : 0.6, cursor: selectedSize ? "pointer" : "not-allowed" }}
+            >
               {t("addToVibe")}
             </button>
           </div>

@@ -7,7 +7,7 @@ export const getCartItemsByUserIdQueryBuilder = (
 ) => {
   return supabaseClient
     .from("cart_items")
-    .select("id, product_id, quantity")
+    .select("id, product_id, variant_id, quantity")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
 }
