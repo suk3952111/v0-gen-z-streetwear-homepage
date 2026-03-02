@@ -1,180 +1,195 @@
-"use client"
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { Minus, Plus, Sparkles, X } from "lucide-react"
-import { vibeCategories } from "@/mocks/cart"
-import { products as mockProducts } from "@/features/products/mocks/products"
-import { useI18n } from "@/lib/i18n/use-i18n"
-import { NoiseOverlay } from "@/components/ui"
-import { createSupabaseClient } from "@/lib/supabase/client"
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Minus, Plus, Sparkles, X } from "lucide-react";
+import { vibeCategories } from "@/mocks/cart";
+import { products as mockProducts } from "@/features/products/mocks/products";
+import { useI18n } from "@/lib/i18n/use-i18n";
+import { NoiseOverlay } from "@/components/ui";
+import { createSupabaseClient } from "@/lib/supabase/client";
 import {
   getCartItemsByUserId,
   removeCartItem,
   updateCartItemQuantity,
-} from "@/features/cart/services"
+} from "@/features/cart/services";
 
 type CartEntry = {
-  key: string
-  productId: string
-  quantity: number
-  size: string
-  dbId?: string
-}
+  key: string;
+  productId: string;
+  quantity: number;
+  size: string;
+  dbId?: string;
+};
 
-const LOCAL_CART_KEY = "vibe-check-cart"
+const LOCAL_CART_KEY = "vibe-check-cart";
 const DEFAULT_LOCAL_CART: CartEntry[] = [
   { key: "hoodie-001", productId: "hoodie-001", quantity: 1, size: "L" },
   { key: "bottom-001", productId: "bottom-001", quantity: 2, size: "M" },
   { key: "acc-001", productId: "acc-001", quantity: 1, size: "ONE SIZE" },
-]
+];
 
 export function CartView() {
-  const { locale, t } = useI18n("cart")
-  const supabase = useMemo(() => createSupabaseClient(), [])
-  const [storageMode, setStorageMode] = useState<"local" | "supabase">("local")
-  const [entries, setEntries] = useState<CartEntry[]>([])
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const { locale, t } = useI18n("cart");
+  const supabase = useMemo(() => createSupabaseClient(), []);
+  const [storageMode, setStorageMode] = useState<"local" | "supabase">("local");
+  const [entries, setEntries] = useState<CartEntry[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const loadLocalCart = useCallback(() => {
-    const saved = localStorage.getItem(LOCAL_CART_KEY)
+    const saved = localStorage.getItem(LOCAL_CART_KEY);
     if (!saved) {
-      setEntries(DEFAULT_LOCAL_CART)
-      return
+      setEntries(DEFAULT_LOCAL_CART);
+      return;
     }
     try {
-      setEntries(JSON.parse(saved) as CartEntry[])
+      setEntries(JSON.parse(saved) as CartEntry[]);
     } catch {
-      setEntries(DEFAULT_LOCAL_CART)
+      setEntries(DEFAULT_LOCAL_CART);
     }
-  }, [])
+  }, []);
 
   const loadSupabaseCart = useCallback(
     async (userId: string) => {
       try {
-        const rows = await getCartItemsByUserId(supabase, userId)
-        setEntries(rows)
+        const rows = await getCartItemsByUserId(supabase, userId);
+        setEntries(rows);
       } catch {
-        setEntries([])
+        setEntries([]);
       }
     },
     [supabase],
-  )
+  );
 
   useEffect(() => {
-    let isActive = true
+    let isActive = true;
 
     const initialize = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser()
+      } = await supabase.auth.getUser();
 
-      if (!isActive) return
+      if (!isActive) return;
 
       if (!user) {
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalCart()
-        return
+        setStorageMode("local");
+        setCurrentUserId(null);
+        loadLocalCart();
+        return;
       }
 
-      setStorageMode("supabase")
-      setCurrentUserId(user.id)
-      await loadSupabaseCart(user.id)
-    }
+      setStorageMode("supabase");
+      setCurrentUserId(user.id);
+      await loadSupabaseCart(user.id);
+    };
 
-    initialize()
+    initialize();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const user = session?.user ?? null
+      const user = session?.user ?? null;
       if (!user) {
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalCart()
-        return
+        setStorageMode("local");
+        setCurrentUserId(null);
+        loadLocalCart();
+        return;
       }
 
-      setStorageMode("supabase")
-      setCurrentUserId(user.id)
-      await loadSupabaseCart(user.id)
-    })
+      setStorageMode("supabase");
+      setCurrentUserId(user.id);
+      await loadSupabaseCart(user.id);
+    });
 
     return () => {
-      isActive = false
-      subscription.unsubscribe()
-    }
-  }, [loadLocalCart, loadSupabaseCart, supabase])
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, [loadLocalCart, loadSupabaseCart, supabase]);
 
   useEffect(() => {
     if (storageMode === "local") {
-      localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(entries))
+      localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(entries));
     }
-  }, [entries, storageMode])
+  }, [entries, storageMode]);
 
   const items = useMemo(() => {
     return entries
       .map((entry) => {
-        const product = mockProducts.find((p) => p.id === entry.productId)
-        if (!product) return null
-        const vibeTag = product.tags[0]?.replace("#", "").toUpperCase() ?? "VIBE"
+        const product = mockProducts.find((p) => p.id === entry.productId);
+        if (!product) return null;
+        const vibeTag =
+          product.tags[0]?.replace("#", "").toUpperCase() ?? "VIBE";
         return {
           id: entry.key,
           dbId: entry.dbId,
           productId: entry.productId,
-          name: product.name.includes("?") ? entry.productId.replace(/-/g, " ").toUpperCase() : product.name,
+          name: product.name.includes("?")
+            ? entry.productId.replace(/-/g, " ").toUpperCase()
+            : product.name,
           price: product.priceUSD,
           priceKRW: product.price,
           size: entry.size,
           quantity: entry.quantity,
           image: product.image,
           vibeTag,
-        }
+        };
       })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
-  }, [entries])
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+  }, [entries]);
 
   const updateQuantity = async (id: string, delta: number) => {
-    const current = entries.find((entry) => entry.key === id)
-    if (!current) return
-    const nextQuantity = Math.max(1, current.quantity + delta)
+    const current = entries.find((entry) => entry.key === id);
+    if (!current) return;
+    const nextQuantity = Math.max(1, current.quantity + delta);
 
     setEntries((prev) =>
-      prev.map((entry) => (entry.key === id ? { ...entry, quantity: nextQuantity } : entry)),
-    )
+      prev.map((entry) =>
+        entry.key === id ? { ...entry, quantity: nextQuantity } : entry,
+      ),
+    );
 
     if (storageMode === "supabase" && current.dbId && currentUserId) {
-      await updateCartItemQuantity(supabase, current.dbId, currentUserId, nextQuantity)
+      await updateCartItemQuantity(
+        supabase,
+        current.dbId,
+        currentUserId,
+        nextQuantity,
+      );
     }
-  }
+  };
 
   const removeItem = async (id: string) => {
-    const current = entries.find((entry) => entry.key === id)
-    setEntries((prev) => prev.filter((entry) => entry.key !== id))
+    const current = entries.find((entry) => entry.key === id);
+    setEntries((prev) => prev.filter((entry) => entry.key !== id));
 
     if (storageMode === "supabase" && current?.dbId && currentUserId) {
-      await removeCartItem(supabase, current.dbId, currentUserId)
+      await removeCartItem(supabase, current.dbId, currentUserId);
     }
-  }
+  };
 
   const formatPrice = (usd: number, krw: number) => {
-    return locale === "KR" ? `${krw.toLocaleString()}원` : `$${usd}`
-  }
+    return locale === "KR" ? `${krw.toLocaleString()}원` : `$${usd}`;
+  };
 
   const subtotal = items.reduce(
-    (acc, item) => acc + (locale === "KR" ? item.priceKRW : item.price) * item.quantity,
+    (acc, item) =>
+      acc + (locale === "KR" ? item.priceKRW : item.price) * item.quantity,
     0,
-  )
+  );
 
-  const orderNumber = "VC" + Math.random().toString(36).substring(2, 8).toUpperCase()
+  const orderNumber =
+    "VC" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  const currentDate = new Date().toLocaleDateString(locale === "KR" ? "ko-KR" : "en-US", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
+  const currentDate = new Date().toLocaleDateString(
+    locale === "KR" ? "ko-KR" : "en-US",
+    {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    },
+  );
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
@@ -191,7 +206,9 @@ export function CartView() {
 
           {items.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-[#888888] text-2xl uppercase tracking-wider mb-8">{t("empty")}</p>
+              <p className="text-[#888888] text-2xl uppercase tracking-wider mb-8">
+                {t("empty")}
+              </p>
               <Link
                 href="/"
                 className="inline-block px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] text-xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors"
@@ -208,7 +225,12 @@ export function CartView() {
                     className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-4 md:p-6 flex flex-col md:flex-row gap-6"
                   >
                     <div className="relative w-full md:w-40 h-40 border-2 border-[#CCFF00] flex-shrink-0">
-                      <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
+                      <Image
+                        src={item.image || "/placeholder.svg"}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                      />
                       <span className="absolute top-2 left-2 px-2 py-1 bg-[#0a0a0a] border border-[#CCFF00] text-[#CCFF00] text-xs font-bold">
                         {item.vibeTag}
                       </span>
@@ -219,12 +241,16 @@ export function CartView() {
                         <h3 className="text-xl md:text-2xl font-bold text-white uppercase tracking-tight">
                           {item.name}
                         </h3>
-                        <p className="text-[#888888] uppercase text-sm mt-1">SIZE: {item.size}</p>
+                        <p className="text-[#888888] uppercase text-sm mt-1">
+                          SIZE: {item.size}
+                        </p>
                       </div>
 
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-[#888888] text-sm uppercase mr-2">{t("quantity")}</span>
+                          <span className="text-[#888888] text-sm uppercase mr-2">
+                            {t("quantity")}
+                          </span>
                           <button
                             onClick={() => updateQuantity(item.id, -1)}
                             className="w-10 h-10 border-2 border-[#CCFF00] text-[#CCFF00] flex items-center justify-center hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors"
@@ -246,7 +272,10 @@ export function CartView() {
 
                         <div className="flex items-center justify-between md:justify-end gap-6">
                           <p className="text-[#CCFF00] text-2xl font-bold">
-                            {formatPrice(item.price * item.quantity, item.priceKRW * item.quantity)}
+                            {formatPrice(
+                              item.price * item.quantity,
+                              item.priceKRW * item.quantity,
+                            )}
                           </p>
                           <button
                             onClick={() => removeItem(item.id)}
@@ -254,7 +283,9 @@ export function CartView() {
                             aria-label="Remove item"
                           >
                             <X className="w-5 h-5" />
-                            <span className="hidden md:inline">{t("remove")}</span>
+                            <span className="hidden md:inline">
+                              {t("remove")}
+                            </span>
                           </button>
                         </div>
                       </div>
@@ -265,15 +296,23 @@ export function CartView() {
                 <div className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-6">
                   <div className="flex items-center gap-3 mb-6">
                     <Sparkles className="w-6 h-6 text-[#CCFF00]" />
-                    <h3 className="text-xl font-bold text-[#CCFF00] uppercase tracking-wider">{t("aiAnalyzer")}</h3>
+                    <h3 className="text-xl font-bold text-[#CCFF00] uppercase tracking-wider">
+                      {t("aiAnalyzer")}
+                    </h3>
                   </div>
-                  <p className="text-[#888888] text-sm uppercase tracking-wider mb-4">{t("vibeScore")}</p>
+                  <p className="text-[#888888] text-sm uppercase tracking-wider mb-4">
+                    {t("vibeScore")}
+                  </p>
                   <div className="space-y-4">
                     {vibeCategories.map((vibe) => (
                       <div key={vibe.name}>
                         <div className="flex justify-between mb-2">
-                          <span className="text-white font-bold uppercase text-sm">{vibe.name}</span>
-                          <span className="text-white font-bold">{vibe.percentage}%</span>
+                          <span className="text-white font-bold uppercase text-sm">
+                            {vibe.name}
+                          </span>
+                          <span className="text-white font-bold">
+                            {vibe.percentage}%
+                          </span>
                         </div>
                         <div className="h-3 bg-[#1a1a1a] border border-[#333333]">
                           <div
@@ -294,8 +333,12 @@ export function CartView() {
               <div className="lg:col-span-1">
                 <div className="border-4 border-[#CCFF00] bg-[#0a0a0a] sticky top-24">
                   <div className="border-b-4 border-dashed border-[#CCFF00] p-6 text-center">
-                    <h2 className="text-3xl font-bold text-[#CCFF00] tracking-tighter">VIBE CHECK</h2>
-                    <p className="text-[#888888] text-xs uppercase tracking-[0.3em] mt-2">STREETWEAR RECEIPT</p>
+                    <h2 className="text-3xl font-bold text-[#CCFF00] tracking-tighter">
+                      VIBE CHECK
+                    </h2>
+                    <p className="text-[#888888] text-xs uppercase tracking-[0.3em] mt-2">
+                      STREETWEAR RECEIPT
+                    </p>
                   </div>
 
                   <div className="p-6 space-y-4 font-mono text-sm">
@@ -313,11 +356,19 @@ export function CartView() {
                     <div className="space-y-2">
                       <p className="text-[#888888] uppercase">{t("items")}</p>
                       {items.map((item) => (
-                        <div key={item.id} className="flex justify-between text-white text-xs">
+                        <div
+                          key={item.id}
+                          className="flex justify-between text-white text-xs"
+                        >
                           <span className="truncate max-w-[60%]">
                             {item.quantity}x {item.name}
                           </span>
-                          <span>{formatPrice(item.price * item.quantity, item.priceKRW * item.quantity)}</span>
+                          <span>
+                            {formatPrice(
+                              item.price * item.quantity,
+                              item.priceKRW * item.quantity,
+                            )}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -326,18 +377,28 @@ export function CartView() {
 
                     <div className="flex justify-between text-[#888888]">
                       <span>{t("subtotal")}</span>
-                      <span className="text-white">{locale === "KR" ? `${subtotal.toLocaleString()}원` : `$${subtotal}`}</span>
+                      <span className="text-white">
+                        {locale === "KR"
+                          ? `${subtotal.toLocaleString()}원`
+                          : `$${subtotal}`}
+                      </span>
                     </div>
                     <div className="flex justify-between text-[#888888]">
                       <span>{t("shipping")}</span>
-                      <span className="text-white text-xs">{t("shippingValue")}</span>
+                      <span className="text-white text-xs">
+                        {t("shippingValue")}
+                      </span>
                     </div>
 
                     <div className="border-t-4 border-[#CCFF00] my-4" />
 
                     <div className="flex justify-between text-xl font-bold">
                       <span className="text-white">{t("total")}</span>
-                      <span className="text-[#CCFF00]">{locale === "KR" ? `${subtotal.toLocaleString()}원` : `$${subtotal}`}</span>
+                      <span className="text-[#CCFF00]">
+                        {locale === "KR"
+                          ? `${subtotal.toLocaleString()}원`
+                          : `$${subtotal}`}
+                      </span>
                     </div>
                   </div>
 
@@ -359,5 +420,5 @@ export function CartView() {
         </div>
       </section>
     </main>
-  )
+  );
 }

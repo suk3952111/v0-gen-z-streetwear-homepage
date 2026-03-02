@@ -3,16 +3,18 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Search, X, ChevronUp, ChevronDown } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { categories, categoryMap, allTags, type Language } from "@/lib/products"
+import type { ShopFilterOption } from "@/features/products/types/shop"
 
 interface CollapsibleFilterBarProps {
-  language: Language
+  language: "EN" | "KR"
   searchQuery: string
   onSearchChange: (query: string) => void
   activeCategory: string
   onCategoryChange: (category: string) => void
   activeTags: string[]
   onToggleTag: (tag: string) => void
+  categories: ShopFilterOption[]
+  tags: ShopFilterOption[]
   content: {
     title: string
     subtitle: string
@@ -28,6 +30,8 @@ export function CollapsibleFilterBar({
   onCategoryChange,
   activeTags,
   onToggleTag,
+  categories,
+  tags,
   content,
 }: CollapsibleFilterBarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -151,13 +155,12 @@ export function CollapsibleFilterBar({
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           style={collapsed ? { scrollbarWidth: "none", msOverflowStyle: "none" } : {}}
         >
-          {categories[language].map((cat) => {
-            const catKey = categoryMap[cat] || cat
-            const isActive = activeCategory === catKey
+          {categories.map((cat) => {
+            const isActive = activeCategory === cat.value
             return (
               <motion.button
-                key={cat}
-                onClick={() => onCategoryChange(catKey)}
+                key={cat.value}
+                onClick={() => onCategoryChange(cat.value)}
                 className={`font-bold uppercase tracking-wider border-4 transition-colors whitespace-nowrap ${
                   isActive
                     ? "bg-[#CCFF00] text-[#0a0a0a] border-[#CCFF00]"
@@ -172,7 +175,7 @@ export function CollapsibleFilterBar({
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
-                [{cat}]
+                [{cat.label}]
               </motion.button>
             )
           })}
@@ -187,12 +190,12 @@ export function CollapsibleFilterBar({
           }`}
           style={collapsed ? { scrollbarWidth: "none", msOverflowStyle: "none" } : {}}
         >
-          {allTags.map((tag) => {
-            const isActive = activeTags.includes(tag)
+          {tags.map((tag) => {
+            const isActive = activeTags.includes(tag.value)
             return (
               <motion.button
-                key={tag}
-                onClick={() => onToggleTag(tag)}
+                key={tag.value}
+                onClick={() => onToggleTag(tag.value)}
                 className={`font-bold uppercase tracking-wider border-2 transition-colors whitespace-nowrap ${
                   isActive
                     ? "bg-[#CCFF00] text-[#0a0a0a] border-[#CCFF00] shadow-[0_0_10px_#CCFF00]"
@@ -207,7 +210,7 @@ export function CollapsibleFilterBar({
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
-                {tag}
+                {tag.label}
               </motion.button>
             )
           })}
