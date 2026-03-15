@@ -6,11 +6,11 @@ export const getProductVariantByProductAndSizeQueryBuilder = (
   productId: string,
   size: string,
 ) => {
-  return (supabaseClient.from("product_variants") as any)
+  return supabaseClient
+    .from("product_variants")
     .select("id, size")
     .eq("product_id", productId)
     .eq("size", size)
     .eq("is_active", true)
     .maybeSingle()
 }
-

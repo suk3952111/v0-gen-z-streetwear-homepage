@@ -5,8 +5,7 @@ export const listProductImagesForEmbeddingQueryBuilder = (
   supabaseClient: SupabaseClient<Database>,
   batchCount: number,
 ) => {
-  return (supabaseClient as any).rpc("list_product_images_for_embedding", {
+  return supabaseClient.rpc("list_product_images_for_embedding", {
     batch_count: batchCount,
   })
 }
-

@@ -7,7 +7,8 @@ export const updateCartItemQuantityQueryBuilder = (
   userId: string,
   quantity: number,
 ) => {
-  return (supabaseClient.from("cart_items") as any)
+  return supabaseClient
+    .from("cart_items")
     .update({ quantity })
     .eq("id", id)
     .eq("user_id", userId)

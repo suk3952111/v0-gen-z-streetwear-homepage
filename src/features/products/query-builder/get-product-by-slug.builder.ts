@@ -5,11 +5,11 @@ export const getProductBySlugQueryBuilder = (
   supabaseClient: SupabaseClient<Database>,
   slug: string,
 ) => {
-  return (supabaseClient.from("products") as any)
+  return supabaseClient
+    .from("products")
     .select("id, slug")
     .eq("slug", slug)
     .eq("is_published", true)
     .eq("is_deleted", false)
     .maybeSingle()
 }
-

@@ -7,7 +7,8 @@ export const updateProductImageCaptionEmbeddingQueryBuilder = (
   caption: string,
   embeddingLiteral: string,
 ) => {
-  return (supabaseClient.from("product_images") as any)
+  return supabaseClient
+    .from("product_images")
     .update({
       caption,
       caption_embedding: embeddingLiteral,
@@ -15,4 +16,3 @@ export const updateProductImageCaptionEmbeddingQueryBuilder = (
     })
     .eq("id", imageId)
 }
-

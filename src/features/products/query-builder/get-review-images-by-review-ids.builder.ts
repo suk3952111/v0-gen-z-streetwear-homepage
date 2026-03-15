@@ -5,9 +5,9 @@ export const getReviewImagesByReviewIdsQueryBuilder = (
   supabaseClient: SupabaseClient<Database>,
   reviewIds: string[],
 ) => {
-  return (supabaseClient.from("review_images") as any)
+  return supabaseClient
+    .from("review_images")
     .select("review_id, image_url, display_order")
     .in("review_id", reviewIds)
     .order("display_order", { ascending: true })
 }
-

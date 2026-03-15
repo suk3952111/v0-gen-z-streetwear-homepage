@@ -6,7 +6,7 @@ import { LoadAdminDashboardSchema, type LoadAdminDashboardInput } from "./schema
 import type { AdminDashboardPayload, LoadAdminDashboardActionState } from "./types"
 
 const ADMIN_ROLES = new Set(["platform_admin"])
-const SALES_STATUSES = ["confirmed", "shipped", "delivered"]
+const SALES_STATUSES = ["confirmed", "shipped", "delivered"] as const
 
 export async function loadAdminDashboardAction(
   input: LoadAdminDashboardInput,
@@ -56,19 +56,23 @@ export async function loadAdminDashboardAction(
       { data: pagedOrdersData, error: pagedOrdersError },
       { data: salesOrdersData, error: salesOrdersError },
     ] = await Promise.all([
-      (supabase.from("orders") as any).select("id", { head: true, count: "exact" }),
-      (supabase.from("orders") as any)
+      supabase.from("orders").select("id", { head: true, count: "exact" }),
+      supabase
+        .from("orders")
         .select("id", { head: true, count: "exact" })
         .eq("status", "pending"),
-      (supabase.from("product_variants") as any)
+      supabase
+        .from("product_variants")
         .select("id", { head: true, count: "exact" })
         .eq("is_active", true)
         .lte("stock_quantity", 5),
-      (supabase.from("orders") as any)
+      supabase
+        .from("orders")
         .select("id, order_number, status, shipping_fee, user:users(full_name)")
         .order("created_at", { ascending: false })
         .range(from, to),
-      (supabase.from("orders") as any)
+      supabase
+        .from("orders")
         .select("id, shipping_fee")
         .in("status", SALES_STATUSES),
     ])
@@ -90,7 +94,8 @@ export async function loadAdminDashboardAction(
     const pagedOrderIds = pagedOrders.map((order) => order.id)
     let pagedItemsData: Array<{ order_id: string; quantity: number; unit_price: number }> = []
     if (pagedOrderIds.length > 0) {
-      const { data, error } = await (supabase.from("order_items") as any)
+      const { data, error } = await supabase
+        .from("order_items")
         .select("order_id, quantity, unit_price")
         .in("order_id", pagedOrderIds)
       if (error) throw new Error(error.message)
@@ -116,7 +121,8 @@ export async function loadAdminDashboardAction(
     let sales = salesOrders.reduce((acc, row) => acc + Number(row.shipping_fee ?? 0), 0)
     const salesOrderIds = salesOrders.map((row) => row.id)
     if (salesOrderIds.length > 0) {
-      const { data: salesItemsData, error: salesItemsError } = await (supabase.from("order_items") as any)
+      const { data: salesItemsData, error: salesItemsError } = await supabase
+        .from("order_items")
         .select("order_id, quantity, unit_price")
         .in("order_id", salesOrderIds)
       if (salesItemsError) throw new Error(salesItemsError.message)
@@ -155,4 +161,3 @@ export async function loadAdminDashboardAction(
     }
   }
 }
-

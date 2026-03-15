@@ -7,7 +7,8 @@ export const getProductReviewsQueryBuilder = (
   productId: string,
   sortBy: ProductReviewSortBy,
 ) => {
-  let query: any = (supabaseClient.from("reviews") as any)
+  let query = supabaseClient
+    .from("reviews")
     .select(
       "id, user_id, rating, title, content, is_verified_purchase, helpful_count, created_at, user:users(full_name, avatar_url)",
     )
@@ -31,4 +32,3 @@ export const getProductReviewsQueryBuilder = (
 
   return query.order("created_at", { ascending: false })
 }
-

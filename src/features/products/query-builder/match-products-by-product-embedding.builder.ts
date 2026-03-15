@@ -6,9 +6,8 @@ export const matchProductsByProductEmbeddingQueryBuilder = (
   sourceProductId: string,
   matchCount: number,
 ) => {
-  return (supabaseClient as any).rpc("match_products_by_product_embedding", {
+  return supabaseClient.rpc("match_products_by_product_embedding", {
     source_product_id: sourceProductId,
     match_count: matchCount,
   })
 }
-

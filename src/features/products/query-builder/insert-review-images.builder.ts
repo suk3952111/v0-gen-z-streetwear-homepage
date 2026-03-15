@@ -11,6 +11,5 @@ export const insertReviewImagesQueryBuilder = (
   supabaseClient: SupabaseClient<Database>,
   payload: InsertReviewImagePayload[],
 ) => {
-  return (supabaseClient.from("review_images") as any).insert(payload)
+  return supabaseClient.from("review_images").insert(payload)
 }
-

@@ -8,7 +8,8 @@ export const insertCartItemQueryBuilder = (
   variantId: string | null,
   quantity: number,
 ) => {
-  return (supabaseClient.from("cart_items") as any)
+  return supabaseClient
+    .from("cart_items")
     .insert({
       user_id: userId,
       product_id: productId,

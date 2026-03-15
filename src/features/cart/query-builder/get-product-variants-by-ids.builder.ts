@@ -5,6 +5,5 @@ export const getProductVariantsByIdsQueryBuilder = (
   supabaseClient: SupabaseClient<Database>,
   variantIds: string[],
 ) => {
-  return (supabaseClient.from("product_variants") as any).select("id, size").in("id", variantIds)
+  return supabaseClient.from("product_variants").select("id, size").in("id", variantIds)
 }
-

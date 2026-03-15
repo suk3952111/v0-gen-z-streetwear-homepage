@@ -19,8 +19,8 @@ const findVerifiedPurchase = async (
   userId: string,
   productId: string,
 ) => {
-  const { data: orderRowsData, error: orderRowsError } = await (supabaseClient
-    .from("orders") as any)
+  const { data: orderRowsData, error: orderRowsError } = await supabaseClient
+    .from("orders")
     .select("id")
     .eq("user_id", userId)
     .in("status", ["confirmed", "shipped", "delivered"])
@@ -34,8 +34,8 @@ const findVerifiedPurchase = async (
   const orderIds = orderRows.map((row) => row.id)
   if (orderIds.length === 0) return false
 
-  const { data: itemRowsData, error: itemRowsError } = await (supabaseClient
-    .from("order_items") as any)
+  const { data: itemRowsData, error: itemRowsError } = await supabaseClient
+    .from("order_items")
     .select("id")
     .eq("product_id", productId)
     .in("order_id", orderIds)
@@ -116,7 +116,8 @@ export const createProductReview = async (
     }
   }
 
-  const { data: userRowData } = await (supabaseClient.from("users") as any)
+  const { data: userRowData } = await supabaseClient
+    .from("users")
     .select("full_name, avatar_url")
     .eq("id", input.userId)
     .maybeSingle()
@@ -137,4 +138,3 @@ export const createProductReview = async (
     created_at: review.created_at,
   }
 }
-

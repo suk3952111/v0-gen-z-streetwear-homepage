@@ -14,9 +14,9 @@ export const insertReviewQueryBuilder = (
   supabaseClient: SupabaseClient<Database>,
   payload: InsertReviewPayload,
 ) => {
-  return (supabaseClient.from("reviews") as any)
+  return supabaseClient
+    .from("reviews")
     .insert(payload)
     .select("id, user_id, rating, title, content, is_verified_purchase, helpful_count, created_at")
     .maybeSingle()
 }
-

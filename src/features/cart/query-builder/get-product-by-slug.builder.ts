@@ -5,7 +5,8 @@ export const getProductBySlugQueryBuilder = (
   supabaseClient: SupabaseClient<Database>,
   productSlug: string,
 ) => {
-  return (supabaseClient.from("products") as any)
+  return supabaseClient
+    .from("products")
     .select("id")
     .eq("slug", productSlug)
     .eq("is_published", true)

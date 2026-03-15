@@ -6,9 +6,8 @@ export const matchProductsByImageEmbeddingQueryBuilder = (
   queryEmbeddingLiteral: string,
   matchCount: number,
 ) => {
-  return (supabaseClient as any).rpc("match_products_by_image_embedding", {
+  return supabaseClient.rpc("match_products_by_image_embedding", {
     query_embedding: queryEmbeddingLiteral,
     match_count: matchCount,
   })
 }
-

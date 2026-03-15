@@ -7,7 +7,8 @@ export const getCartItemByUserAndProductQueryBuilder = (
   productId: string,
   variantId: string | null,
 ) => {
-  const query = (supabaseClient.from("cart_items") as any)
+  const query = supabaseClient
+    .from("cart_items")
     .select("id, quantity")
     .eq("user_id", userId)
     .eq("product_id", productId)
