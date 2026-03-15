@@ -1,10 +1,12 @@
-import type { Database } from "@/types/database.types"
+﻿import type { Database } from "@/types/database.types"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { ShopProductItem } from "@/features/products/types/shop"
 import { getProductsBySlugs } from "@/features/products/services/get-products-by-slugs"
 import { loadShopProductsPage } from "@/features/products/services/load-shop-products-page"
 import { getProductsByIdsQueryBuilder } from "@/features/products/query-builder/get-products-by-ids.builder"
 import { getProductsBySlugsQueryBuilder } from "@/features/products/query-builder/get-products-by-slugs.builder"
+import { getProductTagRelationsByTagIdsQueryBuilder } from "@/features/products/query-builder/get-product-tag-relations-by-tag-ids.builder"
+import { getProductTagsBySlugsQueryBuilder } from "@/features/products/query-builder/get-product-tags-by-slugs.builder"
 import { listProductImagesForEmbeddingQueryBuilder } from "@/features/products/query-builder/list-product-images-for-embedding.builder"
 import { matchProductsByImageEmbeddingQueryBuilder } from "@/features/products/query-builder/match-products-by-image-embedding.builder"
 import { matchProductsByProductEmbeddingQueryBuilder } from "@/features/products/query-builder/match-products-by-product-embedding.builder"
@@ -48,6 +50,8 @@ type ImageStyleAnalysis = {
 
 const GEMINI_IMAGE_MODEL = "gemini-2.5-flash"
 const GEMINI_EMBEDDING_MODEL = "text-embedding-004"
+const EMBEDDING_WEIGHT = 0.85
+const TAG_WEIGHT = 0.15
 
 const parseJsonSafe = <T>(value: string, fallback: T): T => {
   try {
@@ -74,6 +78,15 @@ const toVectorLiteral = (values: number[]) => {
 
 const clampMatch = (similarity: number) => {
   return Math.max(0, Math.min(100, Math.round(similarity * 100)))
+}
+
+const normalizeTagSlug = (tag: string) => {
+  return tag
+    .trim()
+    .toLowerCase()
+    .replace(/^#+/, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
 }
 
 const callGeminiGenerate = async (parts: Array<Record<string, unknown>>) => {
@@ -184,7 +197,7 @@ const ensureProductImageCaptionEmbeddings = async (
 ) => {
   const { data, error } = await listProductImagesForEmbeddingQueryBuilder(supabaseClient, batchCount)
   if (error) {
-    throw new Error(`임베딩 대상 이미지 조회 실패: ${error.message}`)
+    throw new Error(`Failed to list product images for embedding: ${error.message}`)
   }
 
   const rows = (data ?? []) as Array<{ image_id: string; image_url: string }>
@@ -224,7 +237,7 @@ const mapMatchedProductsToItems = async (
     productIds,
   )
   if (productsError) {
-    throw new Error(`매칭 상품 slug 조회 실패: ${productsError.message}`)
+    throw new Error(`Failed to load matched products: ${productsError.message}`)
   }
 
   const productRows = (productsData ?? []) as Array<{ id: string; slug: string }>
@@ -256,10 +269,89 @@ const getProductDbIdBySlug = async (
 ) => {
   const { data, error } = await getProductsBySlugsQueryBuilder(supabaseClient, [productSlug])
   if (error) {
-    throw new Error(`소스 상품 조회 실패: ${error.message}`)
+    throw new Error(`Failed to load source product: ${error.message}`)
   }
   const row = (data ?? [])[0] as { id?: string } | undefined
   return row?.id ?? null
+}
+
+const buildTagScoreByProductId = async (
+  supabaseClient: SupabaseClient<Database>,
+  styleTags: string[],
+) => {
+  const tagSlugs = [...new Set(styleTags.map(normalizeTagSlug).filter((slug) => slug.length > 0))]
+  if (tagSlugs.length === 0) {
+    return new Map<string, number>()
+  }
+
+  const { data: tagRowsData, error: tagRowsError } = await getProductTagsBySlugsQueryBuilder(
+    supabaseClient,
+    tagSlugs,
+  )
+  if (tagRowsError) {
+    throw new Error(`Failed to load style tags: ${tagRowsError.message}`)
+  }
+
+  const tagRows = (tagRowsData ?? []) as Array<{ id: string }>
+  if (tagRows.length === 0) {
+    return new Map<string, number>()
+  }
+
+  const tagIds = tagRows.map((tag) => tag.id)
+  const { data: relationsData, error: relationsError } = await getProductTagRelationsByTagIdsQueryBuilder(
+    supabaseClient,
+    tagIds,
+  )
+  if (relationsError) {
+    throw new Error(`Failed to load product tag relations: ${relationsError.message}`)
+  }
+
+  const relations = (relationsData ?? []) as Array<{ product_id: string; tag_id: string }>
+  const countByProductId = new Map<string, number>()
+  relations.forEach((relation) => {
+    countByProductId.set(relation.product_id, (countByProductId.get(relation.product_id) ?? 0) + 1)
+  })
+
+  const totalTags = Math.max(1, tagRows.length)
+  const scoreByProductId = new Map<string, number>()
+  countByProductId.forEach((count, productId) => {
+    scoreByProductId.set(productId, Math.min(1, count / totalTags))
+  })
+  return scoreByProductId
+}
+
+const mergeEmbeddingAndTagScores = (
+  embeddingRows: Array<{ product_id: string; similarity: number }>,
+  tagScoreByProductId: Map<string, number>,
+) => {
+  const scoreMap = new Map<string, { embedding: number; tag: number }>()
+
+  embeddingRows.forEach((row) => {
+    const prev = scoreMap.get(row.product_id)
+    const embedding = Math.max(prev?.embedding ?? 0, Number(row.similarity ?? 0))
+    scoreMap.set(row.product_id, {
+      embedding,
+      tag: prev?.tag ?? 0,
+    })
+  })
+
+  tagScoreByProductId.forEach((tagScore, productId) => {
+    const prev = scoreMap.get(productId)
+    scoreMap.set(productId, {
+      embedding: prev?.embedding ?? 0,
+      tag: Math.max(prev?.tag ?? 0, tagScore),
+    })
+  })
+
+  return [...scoreMap.entries()]
+    .map(([product_id, score]) => {
+      const similarity =
+        score.embedding > 0
+          ? score.embedding * EMBEDDING_WEIGHT + score.tag * TAG_WEIGHT
+          : score.tag * 0.35
+      return { product_id, similarity }
+    })
+    .sort((a, b) => b.similarity - a.similarity)
 }
 
 export const findStyleByImage = async (
@@ -273,18 +365,23 @@ export const findStyleByImage = async (
   const queryEmbedding = await callGeminiEmbedding(analysis.caption)
   const queryEmbeddingLiteral = toVectorLiteral(queryEmbedding)
 
-  const { data, error } = await matchProductsByImageEmbeddingQueryBuilder(
-    supabaseClient,
-    queryEmbeddingLiteral,
-    Math.max(limit * 4, 24),
-  )
+  const [{ data, error }, tagScoreByProductId] = await Promise.all([
+    matchProductsByImageEmbeddingQueryBuilder(
+      supabaseClient,
+      queryEmbeddingLiteral,
+      Math.max(limit * 4, 24),
+    ),
+    buildTagScoreByProductId(supabaseClient, analysis.styleTags),
+  ])
 
   if (error) {
-    throw new Error(`이미지 유사도 검색 실패: ${error.message}`)
+    throw new Error(`Failed to search similar products by image: ${error.message}`)
   }
 
-  const rows = (data ?? []) as Array<{ product_id: string; similarity: number }>
-  if (rows.length === 0) {
+  const embeddingRows = (data ?? []) as Array<{ product_id: string; similarity: number }>
+  const rankedRows = mergeEmbeddingAndTagScores(embeddingRows, tagScoreByProductId)
+
+  if (rankedRows.length === 0) {
     const fallback = await loadShopProductsPage(supabaseClient, {
       offset: 0,
       limit,
@@ -295,7 +392,7 @@ export const findStyleByImage = async (
     }
   }
 
-  const products = await mapMatchedProductsToItems(supabaseClient, rows, limit)
+  const products = await mapMatchedProductsToItems(supabaseClient, rankedRows, limit)
   return {
     detectedTags: analysis.styleTags,
     products,
@@ -320,7 +417,7 @@ export const recommendSimilarProductsByAi = async (
     Math.max(limit * 4, 24),
   )
   if (error) {
-    throw new Error(`유사 상품 검색 실패: ${error.message}`)
+    throw new Error(`Failed to search similar products: ${error.message}`)
   }
 
   const rows = (data ?? []) as Array<{ product_id: string; similarity: number }>
@@ -330,4 +427,3 @@ export const recommendSimilarProductsByAi = async (
 
   return mapMatchedProductsToItems(supabaseClient, rows, limit)
 }
-
