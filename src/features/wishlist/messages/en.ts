@@ -1,0 +1,16 @@
+export const wishlistEnMessages = {
+  title: "WISH",
+  titleAccent: "LIST",
+  empty: "YOUR WISHLIST IS EMPTY",
+  emptySubtitle: "Save items you love by clicking the heart icon",
+  shopNow: "START SHOPPING",
+  remove: "REMOVE",
+  addToBag: "ADD TO BAG",
+  viewProduct: "VIEW",
+  items: "SAVED ITEMS",
+  continueShopping: "CONTINUE SHOPPING",
+  aiRecommendation: "AI RECOMMENDATION",
+  basedOnWishlist: "Based on your wishlist vibe",
+  itemCountOne: "{count} ITEM SAVED",
+  itemCountOther: "{count} ITEMS SAVED",
+} as const

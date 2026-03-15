@@ -1,0 +1,48 @@
+﻿"use client"
+
+import { ArrowDown } from "lucide-react"
+import { useI18n } from "@/lib/i18n/use-i18n"
+
+export function HeroSection({ language }: { language?: "EN" | "KR" }) {
+  const { t } = useI18n("products.home.hero")
+
+  return (
+    <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden pt-20 pb-20">
+      <div
+        className="absolute inset-0 opacity-40 pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        }}
+      />
+
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(#CCFF00 1px, transparent 1px), linear-gradient(90deg, #CCFF00 1px, transparent 1px)`, backgroundSize: "50px 50px" }} />
+      </div>
+
+      <div className="relative z-10 text-center px-4 max-w-6xl mx-auto">
+        <p className="text-[#CCFF00] text-lg md:text-xl font-bold uppercase tracking-[0.3em] mb-4">{t("subtitle")}</p>
+
+        <h1 className="text-6xl sm:text-8xl md:text-9xl lg:text-[12rem] font-bold text-white leading-none tracking-tighter mb-6">
+          VIBE
+          <br />
+          <span className="text-[#CCFF00]">CHECK</span>
+        </h1>
+
+        <p className="text-white text-xl md:text-2xl font-medium max-w-2xl mx-auto leading-relaxed">
+          {t("tagline")}
+          <br />
+          <span className="text-[#CCFF00]">{t("taglineAccent")}</span>
+        </p>
+      </div>
+
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10">
+        <ArrowDown className="w-8 h-8 text-[#CCFF00]" />
+      </div>
+
+      <div className="absolute top-24 left-4 w-16 h-16 border-l-4 border-t-4 border-[#CCFF00]" />
+      <div className="absolute top-24 right-4 w-16 h-16 border-r-4 border-t-4 border-[#CCFF00]" />
+      <div className="absolute bottom-4 left-4 w-16 h-16 border-l-4 border-b-4 border-[#CCFF00]" />
+      <div className="absolute bottom-4 right-4 w-16 h-16 border-r-4 border-b-4 border-[#CCFF00]" />
+    </section>
+  )
+}

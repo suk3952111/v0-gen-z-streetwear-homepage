@@ -1,0 +1,16 @@
+export const wishlistKrMessages = {
+  title: "위시",
+  titleAccent: "리스트",
+  empty: "위시리스트가 비어 있습니다",
+  emptySubtitle: "하트 아이콘을 눌러 마음에 드는 상품을 저장하세요",
+  shopNow: "쇼핑 시작하기",
+  remove: "삭제",
+  addToBag: "장바구니 담기",
+  viewProduct: "보기",
+  items: "저장한 상품",
+  continueShopping: "쇼핑 계속하기",
+  aiRecommendation: "AI 추천",
+  basedOnWishlist: "위시리스트 취향 기반 추천",
+  itemCountOne: "{count}개 상품 저장됨",
+  itemCountOther: "{count}개 상품 저장됨",
+} as const
