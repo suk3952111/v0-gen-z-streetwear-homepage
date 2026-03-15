@@ -1,6 +1,6 @@
-﻿"use client"
+"use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import Link from "next/link"
 import {
   CheckCircle,
@@ -15,10 +15,14 @@ import {
   Trash2,
   User,
 } from "lucide-react"
-import { mockAddresses, mockOrders, mockUser } from "@/mocks/account"
 import { useI18n } from "@/lib/i18n/use-i18n"
 import { ConfirmModal, NoiseOverlay } from "@/components/ui"
 import { logoutAction } from "@/features/users/actions/logout"
+import { loadAccountOverviewAction } from "@/features/users/actions/account/load-overview"
+import { saveAccountAddressAction } from "@/features/users/actions/account/save-address"
+import { setDefaultAccountAddressAction } from "@/features/users/actions/account/set-default-address"
+import { deleteAccountAddressAction } from "@/features/users/actions/account/delete-address"
+import type { AccountAddress, AccountOrder, AccountProfile } from "@/features/users/types/account"
 
 type Tab = "profile" | "addresses" | "orders"
 
@@ -27,8 +31,12 @@ export function AccountView() {
   const [activeTab, setActiveTab] = useState<Tab>("profile")
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
-  // TODO: Supabase 기준으로 사용자 배송지 CRUD 연결 예정 (현재 mockAddresses 기반 상태)
-  const [addresses, setAddresses] = useState(mockAddresses)
+  const [isLoading, setIsLoading] = useState(true)
+  const [profile, setProfile] = useState<AccountProfile | null>(null)
+  const [addresses, setAddresses] = useState<AccountAddress[]>([])
+  const [orders, setOrders] = useState<AccountOrder[]>([])
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [isAddingAddress, setIsAddingAddress] = useState(false)
   const [editingAddress, setEditingAddress] = useState<string | null>(null)
   const [addressForm, setAddressForm] = useState({
@@ -40,6 +48,50 @@ export function AccountView() {
     postal_code: "",
   })
 
+  useEffect(() => {
+    let cancelled = false
+
+    const loadOverview = async () => {
+      setIsLoading(true)
+      setActionError(null)
+      const result = await loadAccountOverviewAction()
+      if (cancelled) return
+
+      if (!result.success || !result.data) {
+        setActionError(result.errorMessage ?? "Failed to load account data")
+        setProfile(null)
+        setAddresses([])
+        setOrders([])
+        setIsLoading(false)
+        return
+      }
+
+      setProfile(result.data.profile)
+      setAddresses(result.data.addresses)
+      setOrders(result.data.orders)
+      setIsLoading(false)
+    }
+
+    void loadOverview()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const resetAddressForm = () => {
+    setAddressForm({
+      recipient_name: "",
+      phone: "",
+      address_line1: "",
+      address_line2: "",
+      city: "",
+      postal_code: "",
+    })
+    setEditingAddress(null)
+    setIsAddingAddress(false)
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(locale === "KR" ? "ko-KR" : "en-US", {
       year: "numeric",
@@ -49,44 +101,55 @@ export function AccountView() {
   }
 
   const formatPrice = (amount: number) => {
-    return locale === "KR" ? `${(amount * 1000).toLocaleString()}원` : `$${amount}`
+    if (locale === "KR") return `${Math.round(amount).toLocaleString()}원`
+    return `$${Math.max(1, Math.round(amount / 1000))}`
   }
 
-  // TODO: Supabase 기준으로 주소 기본값 업데이트 RPC/쿼리로 교체 예정
-  const handleSetDefaultAddress = (id: string) => {
-    setAddresses((prev) => prev.map((addr) => ({ ...addr, is_default: addr.id === id })))
-  }
-
-  // TODO: Supabase 기준으로 주소 삭제 API 호출로 교체 예정
-  const handleDeleteAddress = (id: string) => {
-    setAddresses((prev) => prev.filter((addr) => addr.id !== id))
-  }
-
-  // TODO: Supabase 기준으로 주소 생성/수정 API 호출로 교체 예정
-  const handleSaveAddress = () => {
-    if (editingAddress) {
-      setAddresses((prev) =>
-        prev.map((addr) => (addr.id === editingAddress ? { ...addr, ...addressForm } : addr)),
-      )
-      setEditingAddress(null)
-    } else {
-      setAddresses((prev) => [
-        ...prev,
-        { id: `addr-${Date.now()}`, ...addressForm, is_default: addresses.length === 0 },
-      ])
+  const handleSetDefaultAddress = async (id: string) => {
+    setActionError(null)
+    const result = await setDefaultAccountAddressAction({ id })
+    if (!result.success) {
+      setActionError(result.errorMessage ?? "Failed to set default address")
+      return
     }
-    setIsAddingAddress(false)
-    setAddressForm({
-      recipient_name: "",
-      phone: "",
-      address_line1: "",
-      address_line2: "",
-      city: "",
-      postal_code: "",
-    })
+    setAddresses(result.data)
   }
 
-  const startEditAddress = (addr: (typeof mockAddresses)[0]) => {
+  const handleDeleteAddress = async (id: string) => {
+    setActionError(null)
+    const result = await deleteAccountAddressAction({ id })
+    if (!result.success) {
+      setActionError(result.errorMessage ?? "Failed to delete address")
+      return
+    }
+    setAddresses(result.data)
+  }
+
+  const handleSaveAddress = async () => {
+    setIsSavingAddress(true)
+    setActionError(null)
+
+    const result = await saveAccountAddressAction({
+      id: editingAddress ?? undefined,
+      recipient_name: addressForm.recipient_name,
+      phone: addressForm.phone,
+      address_line1: addressForm.address_line1,
+      address_line2: addressForm.address_line2,
+      city: addressForm.city,
+      postal_code: addressForm.postal_code,
+    })
+
+    setIsSavingAddress(false)
+    if (!result.success) {
+      setActionError(result.errorMessage ?? "Failed to save address")
+      return
+    }
+
+    setAddresses(result.data)
+    resetAddressForm()
+  }
+
+  const startEditAddress = (addr: AccountAddress) => {
     setAddressForm({
       recipient_name: addr.recipient_name,
       phone: addr.phone,
@@ -134,9 +197,13 @@ export function AccountView() {
               <span className="text-[#CCFF00]">{t("titleAccent")}</span>
             </h1>
             <p className="text-[#888888] uppercase tracking-wider mt-2">
-              {t("welcome")} <span className="text-[#CCFF00]">{mockUser.full_name}</span>
+              {t("welcome")} <span className="text-[#CCFF00]">{profile?.full_name ?? "USER"}</span>
             </p>
           </div>
+
+          {actionError && (
+            <p className="mb-6 text-[#ff6666] text-sm uppercase tracking-wider">{actionError}</p>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-1">
@@ -145,7 +212,7 @@ export function AccountView() {
                   <div className="w-24 h-24 mx-auto mb-4 border-4 border-[#CCFF00] bg-[#1a1a1a] flex items-center justify-center">
                     <User className="w-12 h-12 text-[#CCFF00]" />
                   </div>
-                  <p className="text-white font-bold text-xl uppercase">{mockUser.full_name}</p>
+                  <p className="text-white font-bold text-xl uppercase">{profile?.full_name ?? "USER"}</p>
                   <div className="flex items-center justify-center gap-2 mt-2">
                     <Star className="w-4 h-4 text-[#CCFF00] fill-[#CCFF00]" />
                     <span className="text-[#CCFF00] text-sm font-bold uppercase">
@@ -195,31 +262,44 @@ export function AccountView() {
                   <h2 className="text-2xl font-bold text-white uppercase tracking-wider mb-6 pb-4 border-b-2 border-[#333333]">
                     {t("profile.title")}
                   </h2>
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {[
-                        { label: t("profile.fullName"), value: mockUser.full_name },
-                        { label: t("profile.email"), value: mockUser.email },
-                        { label: t("profile.phone"), value: mockUser.phone },
-                        { label: t("profile.memberSince"), value: formatDate(mockUser.created_at) },
-                      ].map(({ label, value }) => (
-                        <div key={label}>
-                          <label className="block text-[#888888] text-sm uppercase tracking-wider mb-2">{label}</label>
-                          <p className="text-white text-xl font-bold uppercase">{value}</p>
-                        </div>
-                      ))}
+                  {isLoading ? (
+                    <p className="text-[#888888] uppercase tracking-wider text-sm">
+                      {locale === "KR" ? "프로필 불러오는 중..." : "Loading profile..."}
+                    </p>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {[
+                          { label: t("profile.fullName"), value: profile?.full_name ?? "-" },
+                          { label: t("profile.email"), value: profile?.email ?? "-" },
+                          { label: t("profile.phone"), value: profile?.phone ?? "-" },
+                          {
+                            label: t("profile.memberSince"),
+                            value: profile?.created_at ? formatDate(profile.created_at) : "-",
+                          },
+                        ].map(({ label, value }) => (
+                          <div key={label}>
+                            <label className="block text-[#888888] text-sm uppercase tracking-wider mb-2">
+                              {label}
+                            </label>
+                            <p className="text-white text-xl font-bold uppercase">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <button className="px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors">
+                        {t("profile.editProfile")}
+                      </button>
                     </div>
-                    <button className="px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors">
-                      {t("profile.editProfile")}
-                    </button>
-                  </div>
+                  )}
                 </div>
               )}
 
               {activeTab === "addresses" && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-white uppercase tracking-wider">{t("addresses.title")}</h2>
+                    <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
+                      {t("addresses.title")}
+                    </h2>
                     {!isAddingAddress && (
                       <button
                         onClick={() => setIsAddingAddress(true)}
@@ -239,7 +319,9 @@ export function AccountView() {
                           { label: `${t("addresses.phone")} *`, field: "phone" as const },
                         ].map(({ label, field }) => (
                           <div key={field}>
-                            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-2">{label}</label>
+                            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-2">
+                              {label}
+                            </label>
                             <input
                               type="text"
                               value={addressForm[field]}
@@ -255,14 +337,18 @@ export function AccountView() {
                           <input
                             type="text"
                             value={addressForm.address_line1}
-                            onChange={(e) => setAddressForm((prev) => ({ ...prev, address_line1: e.target.value }))}
+                            onChange={(e) =>
+                              setAddressForm((prev) => ({ ...prev, address_line1: e.target.value }))
+                            }
                             className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white focus:border-[#CCFF00] focus:outline-none mb-3"
                             placeholder={t("addresses.addressLine1")}
                           />
                           <input
                             type="text"
                             value={addressForm.address_line2}
-                            onChange={(e) => setAddressForm((prev) => ({ ...prev, address_line2: e.target.value }))}
+                            onChange={(e) =>
+                              setAddressForm((prev) => ({ ...prev, address_line2: e.target.value }))
+                            }
                             className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white focus:border-[#CCFF00] focus:outline-none"
                             placeholder={t("addresses.addressLine2")}
                           />
@@ -272,7 +358,9 @@ export function AccountView() {
                           { label: `${t("addresses.postalCode")} *`, field: "postal_code" as const },
                         ].map(({ label, field }) => (
                           <div key={field}>
-                            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-2">{label}</label>
+                            <label className="block text-white text-sm font-bold uppercase tracking-wider mb-2">
+                              {label}
+                            </label>
                             <input
                               type="text"
                               value={addressForm[field]}
@@ -284,25 +372,16 @@ export function AccountView() {
                       </div>
                       <div className="flex gap-4 mt-6">
                         <button
-                          onClick={handleSaveAddress}
-                          className="px-8 py-3 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors"
+                          disabled={isSavingAddress}
+                          onClick={() => void handleSaveAddress()}
+                          className="px-8 py-3 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {t("addresses.save")}
                         </button>
                         <button
-                          onClick={() => {
-                            setIsAddingAddress(false)
-                            setEditingAddress(null)
-                            setAddressForm({
-                              recipient_name: "",
-                              phone: "",
-                              address_line1: "",
-                              address_line2: "",
-                              city: "",
-                              postal_code: "",
-                            })
-                          }}
-                          className="px-8 py-3 bg-transparent text-[#888888] font-bold uppercase tracking-wider border-4 border-[#333333] hover:border-[#888888] hover:text-white transition-colors"
+                          disabled={isSavingAddress}
+                          onClick={resetAddressForm}
+                          className="px-8 py-3 bg-transparent text-[#888888] font-bold uppercase tracking-wider border-4 border-[#333333] hover:border-[#888888] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {t("addresses.cancel")}
                         </button>
@@ -313,7 +392,9 @@ export function AccountView() {
                   {addresses.length === 0 ? (
                     <div className="text-center py-16 border-4 border-dashed border-[#333333]">
                       <MapPin className="w-16 h-16 text-[#333333] mx-auto mb-4" />
-                      <p className="text-[#888888] text-xl uppercase tracking-wider mb-2">{t("addresses.noAddresses")}</p>
+                      <p className="text-[#888888] text-xl uppercase tracking-wider mb-2">
+                        {t("addresses.noAddresses")}
+                      </p>
                       <p className="text-[#666666] text-sm">{t("addresses.addFirst")}</p>
                     </div>
                   ) : (
@@ -339,7 +420,7 @@ export function AccountView() {
                           <div className="flex gap-3 mt-4 pt-4 border-t-2 border-[#333333]">
                             {!addr.is_default && (
                               <button
-                                onClick={() => handleSetDefaultAddress(addr.id)}
+                                onClick={() => void handleSetDefaultAddress(addr.id)}
                                 className="text-[#CCFF00] text-sm font-bold uppercase hover:underline"
                               >
                                 {t("addresses.setDefault")}
@@ -353,7 +434,7 @@ export function AccountView() {
                               {t("addresses.edit")}
                             </button>
                             <button
-                              onClick={() => handleDeleteAddress(addr.id)}
+                              onClick={() => void handleDeleteAddress(addr.id)}
                               className="flex items-center gap-1 text-[#ff4444] text-sm font-bold uppercase hover:text-white"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -369,18 +450,24 @@ export function AccountView() {
 
               {activeTab === "orders" && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-white uppercase tracking-wider">{t("orders.title")}</h2>
-                  {/* TODO: Supabase 기준으로 사용자 주문 목록 조회로 교체 예정 (현재 mockOrders 렌더링) */}
-                  {mockOrders.length === 0 ? (
+                  <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
+                    {t("orders.title")}
+                  </h2>
+                  {orders.length === 0 ? (
                     <div className="text-center py-16 border-4 border-dashed border-[#333333]">
                       <Package className="w-16 h-16 text-[#333333] mx-auto mb-4" />
-                      <p className="text-[#888888] text-xl uppercase tracking-wider mb-2">{t("orders.noOrders")}</p>
+                      <p className="text-[#888888] text-xl uppercase tracking-wider mb-2">
+                        {t("orders.noOrders")}
+                      </p>
                       <p className="text-[#666666] text-sm">{t("orders.startShopping")}</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {mockOrders.map((order) => (
-                        <div key={order.id} className="border-4 border-[#333333] hover:border-[#CCFF00] transition-colors">
+                      {orders.map((order) => (
+                        <div
+                          key={order.id}
+                          className="border-4 border-[#333333] hover:border-[#CCFF00] transition-colors"
+                        >
                           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 border-b-2 border-[#333333]">
                             <div className="flex items-center gap-6">
                               {[
@@ -409,7 +496,9 @@ export function AccountView() {
                             <div className="flex flex-wrap gap-4">
                               {order.items.map((item, index) => (
                                 <div key={index} className="flex items-center gap-3">
-                                  <p className="text-white text-sm font-bold uppercase max-w-[150px] truncate">{item.name}</p>
+                                  <p className="text-white text-sm font-bold uppercase max-w-[150px] truncate">
+                                    {item.name} x{item.quantity}
+                                  </p>
                                 </div>
                               ))}
                             </div>
@@ -442,3 +531,4 @@ export function AccountView() {
     </main>
   )
 }
+
