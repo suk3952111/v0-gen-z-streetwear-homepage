@@ -10,6 +10,7 @@ import { NoiseOverlay } from "@/components/ui"
 import { useCart } from "@/components/providers/cart-provider"
 import { createSupabaseClient } from "@/lib/supabase/client"
 import { getProductsBySlugs } from "@/features/products/services/get-products-by-slugs"
+import { createCheckoutOrderAction } from "@/features/cart/actions/create-checkout-order"
 import type { ShopProductItem } from "@/features/products/types/shop"
 
 type CartItemViewModel = {
@@ -28,6 +29,9 @@ export function CartView() {
   const { locale, t } = useI18n("cart")
   const { entries, setQuantity, removeFromCart } = useCart()
   const [productById, setProductById] = useState<Record<string, ShopProductItem>>({})
+  const [isCheckingOut, setIsCheckingOut] = useState(false)
+  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -93,13 +97,39 @@ export function CartView() {
     await removeFromCart(id)
   }
 
+  const handleCheckout = async () => {
+    if (items.length === 0 || isCheckingOut) return
+
+    setIsCheckingOut(true)
+    setCheckoutError(null)
+    setCheckoutMessage(null)
+
+    const response = await createCheckoutOrderAction({})
+    setIsCheckingOut(false)
+
+    if (!response.success || !response.data) {
+      setCheckoutError(response.errorMessage ?? "Checkout failed")
+      return
+    }
+
+    for (const entry of entries) {
+      await removeFromCart(entry.key)
+    }
+
+    setCheckoutMessage(
+      locale === "KR"
+        ? `주문이 완료되었습니다. 주문번호: ${response.data.orderNumber}`
+        : `Checkout complete. Order #: ${response.data.orderNumber}`,
+    )
+  }
+
   const formatPrice = (usd: number, krw: number) => {
-    return locale === "KR" ? `${krw.toLocaleString()}원` : `$${usd}`
+    if (locale === "KR") return `${Math.round(krw).toLocaleString()}원`
+    return `$${Math.round(usd)}`
   }
 
   const subtotal = items.reduce(
-    (acc, item) =>
-      acc + (locale === "KR" ? item.priceKRW : item.priceUSD) * item.quantity,
+    (acc, item) => acc + (locale === "KR" ? item.priceKRW : item.priceUSD) * item.quantity,
     0,
   )
 
@@ -122,6 +152,13 @@ export function CartView() {
               <span className="text-[#CCFF00]">{t("titleAccent")}</span>
             </h1>
           </div>
+
+          {checkoutMessage && (
+            <p className="mb-6 text-[#00FF88] text-sm uppercase tracking-wider">{checkoutMessage}</p>
+          )}
+          {checkoutError && (
+            <p className="mb-6 text-[#ff6666] text-sm uppercase tracking-wider">{checkoutError}</p>
+          )}
 
           {items.length === 0 ? (
             <div className="text-center py-20">
@@ -268,7 +305,7 @@ export function CartView() {
                     <div className="flex justify-between text-[#888888]">
                       <span>{t("subtotal")}</span>
                       <span className="text-white">
-                        {locale === "KR" ? `${subtotal.toLocaleString()}원` : `$${subtotal}`}
+                        {locale === "KR" ? `${Math.round(subtotal).toLocaleString()}원` : `$${Math.round(subtotal)}`}
                       </span>
                     </div>
                     <div className="flex justify-between text-[#888888]">
@@ -281,20 +318,30 @@ export function CartView() {
                     <div className="flex justify-between text-xl font-bold">
                       <span className="text-white">{t("total")}</span>
                       <span className="text-[#CCFF00]">
-                        {locale === "KR" ? `${subtotal.toLocaleString()}원` : `$${subtotal}`}
+                        {locale === "KR" ? `${Math.round(subtotal).toLocaleString()}원` : `$${Math.round(subtotal)}`}
                       </span>
                     </div>
                   </div>
 
                   <div className="p-6 pt-0 space-y-4">
-                    <button className="w-full py-4 bg-[#CCFF00] text-[#0a0a0a] text-xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors">
-                      {t("checkout")}
+                    <button
+                      onClick={() => void handleCheckout()}
+                      disabled={isCheckingOut || items.length === 0}
+                      className="w-full py-4 bg-[#CCFF00] text-[#0a0a0a] text-xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isCheckingOut ? "PROCESSING..." : t("checkout")}
                     </button>
                     <Link
                       href="/shop"
                       className="block text-center text-[#888888] text-sm uppercase tracking-wider hover:text-[#CCFF00] transition-colors"
                     >
                       {t("continueShop")}
+                    </Link>
+                    <Link
+                      href="/account"
+                      className="block text-center text-[#888888] text-sm uppercase tracking-wider hover:text-[#CCFF00] transition-colors"
+                    >
+                      VIEW ORDERS
                     </Link>
                   </div>
                 </div>
