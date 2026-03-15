@@ -2,18 +2,21 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { Sparkles, ChevronLeft, Minus, Plus } from "lucide-react"
 import { motion } from "framer-motion"
-import { products, type Language, type Product } from "@/lib/products"
+import type { Language } from "@/lib/products"
 import { ReviewSection } from "./review-section"
 import { ImageFocusModal, type FocusImage } from "./image-focus-modal"
 import { useI18n } from "@/lib/i18n/use-i18n"
 import { useCart } from "@/components/providers/cart-provider"
+import { recommendSimilarStyleAction } from "@/features/products/actions/recommend-similar-style"
+import type { ShopProductItem } from "@/features/products/types/shop"
 
 interface ProductDetailProps {
   language?: Language
   productId: string
+  initialProduct: ShopProductItem | null
 }
 
 const sizes = ["XS", "S", "M", "L", "XL", "XXL"]
@@ -41,7 +44,7 @@ const descriptions: Record<string, { EN: string; KR: string }> = {
   },
 }
 
-function generateGalleryImages(product: Product): string[] {
+function generateGalleryImages(product: ShopProductItem): string[] {
   const base = product.image.split("?")[0]
   return [
     `${base}?w=800&h=1000&fit=crop`,
@@ -51,7 +54,7 @@ function generateGalleryImages(product: Product): string[] {
   ]
 }
 
-export function ProductDetail({ language, productId }: ProductDetailProps) {
+export function ProductDetail({ language, productId, initialProduct }: ProductDetailProps) {
   const { locale, t } = useI18n("products.detail")
   const { addToCart } = useCart()
   const currentLanguage: Language = language ?? locale
@@ -62,9 +65,9 @@ export function ProductDetail({ language, productId }: ProductDetailProps) {
   const [focusOpen, setFocusOpen] = useState(false)
   const [focusIndex, setFocusIndex] = useState(0)
   const [allFocusImages, setAllFocusImages] = useState<FocusImage[]>([])
+  const [similarProducts, setSimilarProducts] = useState<ShopProductItem[]>([])
 
-  // TODO: Supabase 기준으로 상품 단건 조회로 교체 예정 (현재 mock products에서 조회)
-  const product = useMemo(() => products.find((p) => p.id === productId), [productId])
+  const product = initialProduct
 
   const galleryImages = useMemo(() => {
     if (!product) return []
@@ -81,15 +84,24 @@ export function ProductDetail({ language, productId }: ProductDetailProps) {
     }))
   }, [product, galleryImages, productId, t])
 
-  // TODO: Supabase 기준으로 유사 상품 추천 쿼리로 교체 예정 (현재 태그 매칭을 클라이언트 계산)
-  const similarProducts = useMemo(() => {
-    if (!product) return []
-    return products
-      .filter((p) => p.id !== productId)
-      .map((p) => ({ ...p, matchScore: p.tags.filter((tag) => product.tags.includes(tag)).length }))
-      .sort((a, b) => b.matchScore - a.matchScore)
-      .slice(0, 5)
-  }, [product, productId])
+  useEffect(() => {
+    let cancelled = false
+
+    const loadAiRecommendations = async () => {
+      if (!product) return
+      const response = await recommendSimilarStyleAction({
+        productId: product.id,
+        limit: 5,
+      })
+      if (cancelled || !response.success) return
+      setSimilarProducts(response.data)
+    }
+
+    void loadAiRecommendations()
+    return () => {
+      cancelled = true
+    }
+  }, [product])
 
   const formatPrice = (p: number, curr: string) => {
     if (curr === "KRW") return `${p.toLocaleString()}원`
@@ -179,7 +191,7 @@ export function ProductDetail({ language, productId }: ProductDetailProps) {
           <div className="w-full lg:w-1/2 lg:pl-8 lg:border-l-4 lg:border-[#CCFF00]">
             <p className="text-[#CCFF00] text-sm font-bold uppercase tracking-[0.3em] mb-2">{product.category[currentLanguage]}</p>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white uppercase tracking-tighter mb-4 text-balance">{product.name}</h1>
-            <p className="text-4xl md:text-5xl font-bold text-[#CCFF00] mb-6">{formatPrice(currentLanguage === "KR" ? product.price : product.priceUSD, currentLanguage === "KR" ? "KRW" : "USD")}</p>
+            <p className="text-4xl md:text-5xl font-bold text-[#CCFF00] mb-6">{formatPrice(currentLanguage === "KR" ? product.priceKRW : product.priceUSD, currentLanguage === "KR" ? "KRW" : "USD")}</p>
             <p className="text-white text-lg leading-relaxed mb-8 border-l-4 border-[#CCFF00] pl-4">{description[currentLanguage]}</p>
 
             <div className="mb-8">
@@ -238,7 +250,7 @@ export function ProductDetail({ language, productId }: ProductDetailProps) {
                 </div>
                 <div className="p-4 border-t-4 border-[#CCFF00]">
                   <h3 className="text-white text-lg font-bold uppercase tracking-tight mb-2 truncate">{sp.name}</h3>
-                  <p className="text-[#CCFF00] text-xl font-bold">{formatPrice(currentLanguage === "KR" ? sp.price : sp.priceUSD, currentLanguage === "KR" ? "KRW" : "USD")}</p>
+                  <p className="text-[#CCFF00] text-xl font-bold">{formatPrice(currentLanguage === "KR" ? sp.priceKRW : sp.priceUSD, currentLanguage === "KR" ? "KRW" : "USD")}</p>
                 </div>
               </Link>
             ))}

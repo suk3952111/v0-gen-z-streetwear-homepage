@@ -6,7 +6,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { X, Upload, Sparkles, ScanLine } from "lucide-react"
 import { useI18n } from "@/lib/i18n/use-i18n"
-import { getMockVisualSearchResults, mockVisualSearchTags } from "@/mocks/visual-search"
+import { findStyleByImageAction } from "@/features/products/actions/find-style-by-image"
+import type { ShopProductItem } from "@/features/products/types/shop"
 
 interface AIVisualSearchModalProps {
   isOpen: boolean
@@ -14,14 +15,15 @@ interface AIVisualSearchModalProps {
   language?: "EN" | "KR"
 }
 
-const mockResults = getMockVisualSearchResults()
-// TODO: Supabase 기준으로 이미지 임베딩/태그 검색 결과를 조회하도록 교체 예정 (현재 mock 결과 고정)
-
 export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [detectedTags, setDetectedTags] = useState<string[]>([])
+  const [results, setResults] = useState<ShopProductItem[]>([])
+  const [hasError, setHasError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string>("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { locale, t } = useI18n("products.visualSearch")
@@ -34,14 +36,36 @@ export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProp
   const handleFileUpload = useCallback((file: File) => {
     if (file && file.type.startsWith("image/")) {
       const reader = new FileReader()
-      reader.onload = (e) => {
-        setUploadedImage(e.target?.result as string)
+      reader.onload = async (e) => {
+        const dataUrl = e.target?.result as string
+        if (!dataUrl) return
+        setUploadedImage(dataUrl)
         setIsScanning(true)
         setShowResults(false)
+        setHasError(false)
+        setErrorMessage("")
+        setDetectedTags([])
+        setResults([])
+
+        const startedAt = Date.now()
+        const response = await findStyleByImageAction({
+          imageDataUrl: dataUrl,
+          limit: 6,
+        })
+        const elapsed = Date.now() - startedAt
+        const waitMs = Math.max(0, 1200 - elapsed)
+
         setTimeout(() => {
           setIsScanning(false)
           setShowResults(true)
-        }, 2500)
+          if (!response.success) {
+            setHasError(true)
+            setErrorMessage(response.errorMessage ?? "AI search failed.")
+            return
+          }
+          setDetectedTags(response.data.detectedTags)
+          setResults(response.data.products)
+        }, waitMs)
       }
       reader.readAsDataURL(file)
     }
@@ -73,6 +97,10 @@ export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProp
     setUploadedImage(null)
     setIsScanning(false)
     setShowResults(false)
+    setHasError(false)
+    setErrorMessage("")
+    setDetectedTags([])
+    setResults([])
     if (fileInputRef.current) fileInputRef.current.value = ""
   }, [])
 
@@ -137,7 +165,7 @@ export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProp
                   <div>
                     <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><Sparkles className="w-5 h-5 text-[#CCFF00]" />{t("detected")}</h3>
                     <div className="flex flex-wrap gap-2">
-                      {mockVisualSearchTags.map((tag, index) => (
+                      {detectedTags.map((tag, index) => (
                         <span key={index} className="px-4 py-2 border-2 border-[#CCFF00] bg-[#CCFF00]/10 text-[#CCFF00] text-sm font-bold uppercase tracking-wider hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors cursor-pointer" style={{ animation: `fade-in-tag 0.3s ease-out ${index * 0.1}s both` }}>{tag}</span>
                       ))}
                     </div>
@@ -145,8 +173,13 @@ export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProp
 
                   <div>
                     <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><Sparkles className="w-5 h-5 text-[#CCFF00]" />{t("results")}</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {mockResults.map((product, index) => (
+                    {hasError ? (
+                      <p className="text-[#ff6666] text-sm uppercase tracking-wider">
+                        {errorMessage}
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {results.map((product, index) => (
                         <Link key={product.id} href={`/product/${product.id}`} onClick={onClose} className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_#CCFF00] cursor-pointer block" style={{ animation: `fade-in-result 0.4s ease-out ${index * 0.1}s both` }}>
                           <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-1 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]" style={{ animation: "badge-glow 2s ease-in-out infinite" }}>
                             <Sparkles className="w-3 h-3" />
@@ -161,13 +194,14 @@ export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProp
                           <div className="p-3 border-t-4 border-[#CCFF00]">
                             <h4 className="text-white text-sm font-bold uppercase tracking-tight truncate mb-1">{product.name}</h4>
                             <div className="flex items-center justify-between">
-                              <p className="text-[#CCFF00] font-bold">{formatPrice(locale === "KR" ? product.price : product.priceUSD, locale === "KR" ? "KRW" : "USD")}</p>
+                              <p className="text-[#CCFF00] font-bold">{formatPrice(locale === "KR" ? product.priceKRW : product.priceUSD, locale === "KR" ? "KRW" : "USD")}</p>
                               <span className="text-white/50 text-xs font-bold uppercase group-hover:text-[#CCFF00] transition-colors">{t("viewProduct")}</span>
                             </div>
                           </div>
                         </Link>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
