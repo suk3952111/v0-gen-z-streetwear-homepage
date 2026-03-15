@@ -1,27 +1,15 @@
 ﻿"use client"
 
 import React from "react"
-import { useState, useRef, useMemo } from "react"
+import { useState, useRef, useMemo, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { Star, X, CheckCircle, ThumbsUp, Camera } from "lucide-react"
 import { motion } from "framer-motion"
 import type { Language } from "@/lib/products"
 import type { FocusImage } from "./image-focus-modal"
-import { mockReviews } from "@/mocks/reviews"
-
-interface Review {
-  id: string
-  user_id: string
-  username: string
-  avatar_url?: string
-  rating: number
-  title: string
-  content: string
-  images: string[]
-  is_verified_purchase: boolean
-  helpful_count: number
-  created_at: string
-}
+import { loadProductReviewsAction } from "@/features/products/actions/load-product-reviews"
+import { createProductReviewAction } from "@/features/products/actions/create-product-review"
+import type { ProductReview } from "@/features/products/types/review"
 
 interface ReviewSectionProps {
   productId: string
@@ -83,10 +71,12 @@ const content = {
 }
 
 export function ReviewSection({ productId, language, onImageClick }: ReviewSectionProps) {
-  // TODO: Supabase 기준으로 상품별 리뷰 조회로 교체 예정 (현재 mockReviews 사용)
-  const [reviews, setReviews] = useState<Review[]>(mockReviews)
+  const [reviews, setReviews] = useState<ProductReview[]>([])
   const [isWriting, setIsWriting] = useState(false)
   const [sortBy, setSortBy] = useState<"newest" | "highest" | "lowest" | "helpful">("newest")
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // 폼 상태
   const [rating, setRating] = useState(0)
@@ -97,6 +87,20 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const t = language === "KR" ? content.KR : content.EN
+
+  const loadReviews = useCallback(async (nextSortBy: typeof sortBy) => {
+    setIsLoading(true)
+    const response = await loadProductReviewsAction({
+      productId,
+      sortBy: nextSortBy,
+    })
+    setReviews(response.success ? response.data : [])
+    setIsLoading(false)
+  }, [productId])
+
+  useEffect(() => {
+    void loadReviews(sortBy)
+  }, [loadReviews, sortBy])
 
   const averageRating = reviews.length > 0
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
@@ -123,52 +127,55 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
     return imgs
   }, [reviews])
 
-  // TODO: Supabase 기준으로 정렬 옵션을 서버 order by로 이관 예정 (현재 클라이언트 정렬)
-  const sortedReviews = [...reviews].sort((a, b) => {
-    switch (sortBy) {
-      case "newest": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      case "highest": return b.rating - a.rating
-      case "lowest": return a.rating - b.rating
-      case "helpful": return b.helpful_count - a.helpful_count
-      default: return 0
-    }
-  })
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const value = typeof reader.result === "string" ? reader.result : ""
+        resolve(value)
+      }
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(file)
+    })
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
-    const newImages: string[] = []
-    Array.from(files).slice(0, 5 - uploadedImages.length).forEach(file => {
-      newImages.push(URL.createObjectURL(file))
-    })
-    setUploadedImages(prev => [...prev, ...newImages].slice(0, 5))
+    const picked = Array.from(files).slice(0, 5 - uploadedImages.length)
+    const newImages = await Promise.all(picked.map(readFileAsDataUrl))
+    setUploadedImages((prev) => [...prev, ...newImages].slice(0, 5))
   }
 
   const removeImage = (index: number) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (rating === 0 || !reviewContent.trim()) return
-    const newReview: Review = {
-      id: `rev-${Date.now()}`,
-      user_id: "current-user",
-      username: "VIBE_USER",
+
+    setIsSubmitting(true)
+    setSubmitError(null)
+    const response = await createProductReviewAction({
+      productId,
       rating,
-      title: title || "Great product",
-      content: reviewContent,
-      images: uploadedImages,
-      is_verified_purchase: false,
-      helpful_count: 0,
-      created_at: new Date().toISOString(),
+      title: title.trim() || undefined,
+      content: reviewContent.trim(),
+      imageDataUrls: uploadedImages,
+    })
+    setIsSubmitting(false)
+
+    if (!response.success) {
+      setSubmitError(response.errorMessage ?? "Failed to submit review")
+      return
     }
-    setReviews(prev => [newReview, ...prev])
+
     setIsWriting(false)
     setRating(0)
     setTitle("")
     setReviewContent("")
     setUploadedImages([])
+    await loadReviews(sortBy)
   }
 
   const formatDate = (dateString: string) => {
@@ -239,10 +246,10 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
 
       {/* 리뷰 작성 버튼 / 폼 */}
       {!isWriting ? (
-        <button
-          onClick={() => setIsWriting(true)}
-          className="mb-8 px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] text-lg font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors"
-        >
+          <button
+            onClick={() => setIsWriting(true)}
+            className="mb-8 px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] text-lg font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors"
+          >
           {t.writeReview}
         </button>
       ) : (
@@ -294,14 +301,17 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
                 </button>
               )}
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
+            <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={(e) => { void handleImageUpload(e) }} className="hidden" />
           </div>
+          {submitError && (
+            <p className="text-[#ff6666] text-sm uppercase tracking-wider mb-4">{submitError}</p>
+          )}
           {/* 버튼 */}
           <div className="flex gap-4">
-            <button type="submit" disabled={rating === 0 || !reviewContent.trim()} className="px-8 py-3 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={isSubmitting || rating === 0 || !reviewContent.trim()} className="px-8 py-3 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {t.submit}
             </button>
-            <button type="button" onClick={() => { setIsWriting(false); setRating(0); setTitle(""); setReviewContent(""); setUploadedImages([]) }} className="px-8 py-3 bg-transparent text-[#888888] font-bold uppercase tracking-wider border-4 border-[#333333] hover:border-[#888888] hover:text-white transition-colors">
+            <button type="button" disabled={isSubmitting} onClick={() => { setIsWriting(false); setRating(0); setTitle(""); setReviewContent(""); setUploadedImages([]); setSubmitError(null) }} className="px-8 py-3 bg-transparent text-[#888888] font-bold uppercase tracking-wider border-4 border-[#333333] hover:border-[#888888] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {t.cancel}
             </button>
           </div>
@@ -336,7 +346,11 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
       )}
 
       {/* 리뷰 목록 */}
-      {reviews.length === 0 ? (
+      {isLoading ? (
+        <div className="text-[#888888] text-sm uppercase tracking-wider">
+          {language === "KR" ? "리뷰 불러오는 중..." : "Loading reviews..."}
+        </div>
+      ) : reviews.length === 0 ? (
         <div className="text-center py-16 border-4 border-dashed border-[#333333]">
           <Star className="w-16 h-16 text-[#333333] mx-auto mb-4" />
           <p className="text-[#888888] text-xl uppercase tracking-wider mb-2">{t.noReviews}</p>
@@ -344,7 +358,7 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
         </div>
       ) : (
         <div className="space-y-6">
-          {sortedReviews.map((review) => (
+          {reviews.map((review) => (
             <div key={review.id} className="border-4 border-[#333333] hover:border-[#CCFF00] transition-colors p-6">
               {/* 리뷰 헤더 */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
