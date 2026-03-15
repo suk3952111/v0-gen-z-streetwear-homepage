@@ -22,6 +22,7 @@ import { loadAccountOverviewAction } from "@/features/users/actions/account/load
 import { saveAccountAddressAction } from "@/features/users/actions/account/save-address"
 import { setDefaultAccountAddressAction } from "@/features/users/actions/account/set-default-address"
 import { deleteAccountAddressAction } from "@/features/users/actions/account/delete-address"
+import { updateAccountProfileAction } from "@/features/users/actions/account/update-profile"
 import type { AccountAddress, AccountOrder, AccountProfile } from "@/features/users/types/account"
 
 type Tab = "profile" | "addresses" | "orders"
@@ -36,6 +37,12 @@ export function AccountView() {
   const [addresses, setAddresses] = useState<AccountAddress[]>([])
   const [orders, setOrders] = useState<AccountOrder[]>([])
   const [actionError, setActionError] = useState<string | null>(null)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [profileForm, setProfileForm] = useState({
+    full_name: "",
+    phone: "",
+  })
   const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [isAddingAddress, setIsAddingAddress] = useState(false)
   const [editingAddress, setEditingAddress] = useState<string | null>(null)
@@ -67,6 +74,10 @@ export function AccountView() {
       }
 
       setProfile(result.data.profile)
+      setProfileForm({
+        full_name: result.data.profile.full_name ?? "",
+        phone: result.data.profile.phone ?? "",
+      })
       setAddresses(result.data.addresses)
       setOrders(result.data.orders)
       setIsLoading(false)
@@ -101,8 +112,30 @@ export function AccountView() {
   }
 
   const formatPrice = (amount: number) => {
-    if (locale === "KR") return `${Math.round(amount).toLocaleString()}원`
+    if (locale === "KR") return `${Math.round(amount).toLocaleString()} KRW`
     return `$${Math.max(1, Math.round(amount / 1000))}`
+  }
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true)
+    setActionError(null)
+    const result = await updateAccountProfileAction({
+      full_name: profileForm.full_name,
+      phone: profileForm.phone,
+    })
+    setIsSavingProfile(false)
+
+    if (!result.success || !result.data) {
+      setActionError(result.errorMessage ?? "Failed to update profile")
+      return
+    }
+
+    setProfile(result.data)
+    setProfileForm({
+      full_name: result.data.full_name ?? "",
+      phone: result.data.phone ?? "",
+    })
+    setIsEditingProfile(false)
   }
 
   const handleSetDefaultAddress = async (id: string) => {
@@ -264,8 +297,61 @@ export function AccountView() {
                   </h2>
                   {isLoading ? (
                     <p className="text-[#888888] uppercase tracking-wider text-sm">
-                      {locale === "KR" ? "프로필 불러오는 중..." : "Loading profile..."}
+                      {locale === "KR" ? "Loading profile..." : "Loading profile..."}
                     </p>
+                  ) : isEditingProfile ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-[#888888] text-sm uppercase tracking-wider mb-2">
+                            {t("profile.fullName")}
+                          </label>
+                          <input
+                            type="text"
+                            value={profileForm.full_name}
+                            onChange={(e) =>
+                              setProfileForm((prev) => ({ ...prev, full_name: e.target.value }))
+                            }
+                            className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white focus:border-[#CCFF00] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[#888888] text-sm uppercase tracking-wider mb-2">
+                            {t("profile.phone")}
+                          </label>
+                          <input
+                            type="text"
+                            value={profileForm.phone}
+                            onChange={(e) =>
+                              setProfileForm((prev) => ({ ...prev, phone: e.target.value }))
+                            }
+                            className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white focus:border-[#CCFF00] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-4">
+                        <button
+                          disabled={isSavingProfile || profileForm.full_name.trim().length === 0}
+                          onClick={() => void handleSaveProfile()}
+                          className="px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {t("addresses.save")}
+                        </button>
+                        <button
+                          disabled={isSavingProfile}
+                          onClick={() => {
+                            setIsEditingProfile(false)
+                            setProfileForm({
+                              full_name: profile?.full_name ?? "",
+                              phone: profile?.phone ?? "",
+                            })
+                          }}
+                          className="px-8 py-4 bg-transparent text-[#888888] font-bold uppercase tracking-wider border-4 border-[#333333] hover:border-[#888888] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {t("addresses.cancel")}
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -286,7 +372,16 @@ export function AccountView() {
                           </div>
                         ))}
                       </div>
-                      <button className="px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors">
+                      <button
+                        onClick={() => {
+                          setIsEditingProfile(true)
+                          setProfileForm({
+                            full_name: profile?.full_name ?? "",
+                            phone: profile?.phone ?? "",
+                          })
+                        }}
+                        className="px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors"
+                      >
                         {t("profile.editProfile")}
                       </button>
                     </div>
