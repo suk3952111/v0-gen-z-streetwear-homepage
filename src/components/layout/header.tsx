@@ -48,7 +48,7 @@ export function Header({ onAuthClick, currentUser }: HeaderProps) {
           <Link href="/shop" className="text-white text-lg font-bold uppercase tracking-wider hover:text-[#CCFF00] transition-colors border-b-2 border-transparent hover:border-[#CCFF00]">
             {t("nav.archive")}
           </Link>
-          <Link href="#" className="text-white text-lg font-bold uppercase tracking-wider hover:text-[#CCFF00] transition-colors border-b-2 border-transparent hover:border-[#CCFF00]">
+          <Link href="/about" className="text-white text-lg font-bold uppercase tracking-wider hover:text-[#CCFF00] transition-colors border-b-2 border-transparent hover:border-[#CCFF00]">
             {t("nav.about")}
           </Link>
         </nav>
@@ -154,7 +154,7 @@ export function Header({ onAuthClick, currentUser }: HeaderProps) {
           <Link href="/shop" className="block px-4 py-4 text-white text-xl font-bold uppercase border-b-2 border-[#1a1a1a] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
             {t("nav.archive")}
           </Link>
-          <Link href="#" className="block px-4 py-4 text-white text-xl font-bold uppercase hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
+          <Link href="/about" className="block px-4 py-4 text-white text-xl font-bold uppercase hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
             {t("nav.about")}
           </Link>
           {currentUser && (

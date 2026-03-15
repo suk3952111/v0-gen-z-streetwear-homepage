@@ -31,7 +31,8 @@ export async function updateAccountProfileAction(
       }
     }
 
-    const { data, error } = await (supabase.from("users") as any)
+    const { data, error } = await supabase
+      .from("users")
       .update({
         full_name: parsed.data.full_name.trim(),
         phone: parsed.data.phone.trim() || null,
@@ -63,4 +64,3 @@ export async function updateAccountProfileAction(
     }
   }
 }
-

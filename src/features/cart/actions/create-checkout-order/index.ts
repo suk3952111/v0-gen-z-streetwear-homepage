@@ -40,7 +40,8 @@ export async function createCheckoutOrderAction(
       }
     }
 
-    const { data: cartRowsData, error: cartRowsError } = await (supabase.from("cart_items") as any)
+    const { data: cartRowsData, error: cartRowsError } = await supabase
+      .from("cart_items")
       .select("id, product_id, variant_id, quantity")
       .eq("user_id", user.id)
 
@@ -61,7 +62,8 @@ export async function createCheckoutOrderAction(
     }
 
     const productIds = [...new Set(cartRows.map((row) => row.product_id))]
-    const { data: productRowsData, error: productRowsError } = await (supabase.from("products") as any)
+    const { data: productRowsData, error: productRowsError } = await supabase
+      .from("products")
       .select("id, base_price, is_published, is_deleted")
       .in("id", productIds)
 
@@ -87,7 +89,8 @@ export async function createCheckoutOrderAction(
       }
     }
 
-    const { data: defaultAddressData } = await (supabase.from("user_addresses") as any)
+    const { data: defaultAddressData } = await supabase
+      .from("user_addresses")
       .select("id")
       .eq("user_id", user.id)
       .eq("is_default", true)
@@ -118,7 +121,8 @@ export async function createCheckoutOrderAction(
 
     for (let i = 0; i < 6; i += 1) {
       const candidate = makeOrderNumber()
-      const { data, error } = await (supabase.from("orders") as any)
+      const { data, error } = await supabase
+        .from("orders")
         .insert({
           order_number: candidate,
           user_id: user.id,
@@ -152,11 +156,12 @@ export async function createCheckoutOrderAction(
       unit_price: row.unit_price,
     }))
 
-    const { error: itemInsertError } = await (supabase.from("order_items") as any).insert(orderItems)
+    const { error: itemInsertError } = await supabase.from("order_items").insert(orderItems)
     if (itemInsertError) throw new Error(itemInsertError.message)
 
     // Payment/order status transition after order creation.
-    const { error: statusUpdateError } = await (supabase.from("orders") as any)
+    const { error: statusUpdateError } = await supabase
+      .from("orders")
       .update({
         payment_status: "completed",
         status: "confirmed",
@@ -167,7 +172,8 @@ export async function createCheckoutOrderAction(
 
     if (statusUpdateError) throw new Error(statusUpdateError.message)
 
-    const { error: cartDeleteError } = await (supabase.from("cart_items") as any)
+    const { error: cartDeleteError } = await supabase
+      .from("cart_items")
       .delete()
       .eq("user_id", user.id)
     if (cartDeleteError) throw new Error(cartDeleteError.message)
@@ -191,4 +197,3 @@ export async function createCheckoutOrderAction(
     }
   }
 }
-

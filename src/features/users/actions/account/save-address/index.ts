@@ -1,11 +1,16 @@
 "use server"
 
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { createSupabaseServer } from "@/lib/supabase/server"
+import type { Database } from "@/types/database.types"
 import { SaveAccountAddressSchema, type SaveAccountAddressInput } from "./schema"
 import type { SaveAccountAddressActionState } from "./types"
 
-const loadAddresses = async (supabase: any, userId: string) => {
-  const { data, error } = await (supabase.from("user_addresses") as any)
+type UserAddressRow = Database["public"]["Tables"]["user_addresses"]["Row"]
+
+const loadAddresses = async (supabase: SupabaseClient<Database>, userId: string) => {
+  const { data, error } = await supabase
+    .from("user_addresses")
     .select("id, recipient_name, phone, base_address, detail_address, city, postal_code, is_default")
     .eq("user_id", userId)
     .order("is_default", { ascending: false })
@@ -13,7 +18,7 @@ const loadAddresses = async (supabase: any, userId: string) => {
 
   if (error) throw new Error(error.message)
 
-  return ((data ?? []) as Array<any>).map((row) => ({
+  return ((data ?? []) as UserAddressRow[]).map((row) => ({
     id: row.id,
     recipient_name: row.recipient_name,
     phone: row.phone,
@@ -63,7 +68,8 @@ export async function saveAccountAddressAction(
     }
 
     if (parsed.data.id) {
-      const { error } = await (supabase.from("user_addresses") as any)
+      const { error } = await supabase
+        .from("user_addresses")
         .update(payload)
         .eq("id", parsed.data.id)
         .eq("user_id", user.id)
@@ -71,7 +77,7 @@ export async function saveAccountAddressAction(
       if (error) throw new Error(error.message)
     } else {
       const existingAddresses = await loadAddresses(supabase, user.id)
-      const { error } = await (supabase.from("user_addresses") as any).insert({
+      const { error } = await supabase.from("user_addresses").insert({
         ...payload,
         is_default: existingAddresses.length === 0,
       })
@@ -92,4 +98,3 @@ export async function saveAccountAddressAction(
     }
   }
 }
-

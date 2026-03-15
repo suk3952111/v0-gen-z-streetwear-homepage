@@ -2,9 +2,19 @@
 
 import { createSupabaseServer } from "@/lib/supabase/server"
 import type { AccountAddress, AccountOrder, AccountOverview } from "@/features/users/types/account"
+import type { Database } from "@/types/database.types"
 import type { LoadAccountOverviewActionState } from "./types"
 
-const mapAddresses = (rows: Array<any>): AccountAddress[] => {
+type UserAddressRow = Database["public"]["Tables"]["user_addresses"]["Row"]
+type OrderRow = Database["public"]["Tables"]["orders"]["Row"]
+type OrderItemRow = {
+  order_id: string
+  quantity: number
+  unit_price: number
+  product: { name: string } | null
+}
+
+const mapAddresses = (rows: UserAddressRow[]): AccountAddress[] => {
   return rows.map((row) => ({
     id: row.id,
     recipient_name: row.recipient_name,
@@ -18,8 +28,8 @@ const mapAddresses = (rows: Array<any>): AccountAddress[] => {
 }
 
 const mapOrders = (
-  orderRows: Array<any>,
-  itemRows: Array<any>,
+  orderRows: OrderRow[],
+  itemRows: OrderItemRow[],
 ): AccountOrder[] => {
   const itemsByOrderId = new Map<string, Array<{ name: string; quantity: number; amount: number }>>()
 
@@ -72,16 +82,19 @@ export async function loadAccountOverviewAction(): Promise<LoadAccountOverviewAc
 
     const [{ data: profileRow, error: profileError }, { data: addressRows, error: addressError }, { data: orderRows, error: orderError }] =
       await Promise.all([
-        (supabase.from("users") as any)
+        supabase
+          .from("users")
           .select("id, email, full_name, phone, created_at")
           .eq("id", user.id)
           .single(),
-        (supabase.from("user_addresses") as any)
+        supabase
+          .from("user_addresses")
           .select("id, recipient_name, phone, base_address, detail_address, city, postal_code, is_default")
           .eq("user_id", user.id)
           .order("is_default", { ascending: false })
           .order("created_at", { ascending: false }),
-        (supabase.from("orders") as any)
+        supabase
+          .from("orders")
           .select("id, order_number, status, shipping_fee, created_at")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
@@ -92,17 +105,22 @@ export async function loadAccountOverviewAction(): Promise<LoadAccountOverviewAc
     if (addressError) throw new Error(addressError.message)
     if (orderError) throw new Error(orderError.message)
 
-    const safeOrders = (orderRows ?? []) as Array<any>
+    if (!profileRow) {
+      throw new Error("Profile not found")
+    }
+
+    const safeOrders = (orderRows ?? []) as OrderRow[]
     const orderIds = safeOrders.map((order) => order.id)
 
-    let itemRows: Array<any> = []
+    let itemRows: OrderItemRow[] = []
     if (orderIds.length > 0) {
-      const { data, error } = await (supabase.from("order_items") as any)
+      const { data, error } = await supabase
+        .from("order_items")
         .select("order_id, quantity, unit_price, product:products(name)")
         .in("order_id", orderIds)
 
       if (error) throw new Error(error.message)
-      itemRows = (data ?? []) as Array<any>
+      itemRows = (data ?? []) as unknown as OrderItemRow[]
     }
 
     const overview: AccountOverview = {
@@ -113,7 +131,7 @@ export async function loadAccountOverviewAction(): Promise<LoadAccountOverviewAc
         phone: profileRow.phone,
         created_at: profileRow.created_at,
       },
-      addresses: mapAddresses((addressRows ?? []) as Array<any>),
+      addresses: mapAddresses((addressRows ?? []) as UserAddressRow[]),
       orders: mapOrders(safeOrders, itemRows),
     }
 
@@ -130,4 +148,3 @@ export async function loadAccountOverviewAction(): Promise<LoadAccountOverviewAc
     }
   }
 }
-

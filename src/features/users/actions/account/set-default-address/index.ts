@@ -1,14 +1,19 @@
 "use server"
 
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { createSupabaseServer } from "@/lib/supabase/server"
+import type { Database } from "@/types/database.types"
 import {
   SetDefaultAccountAddressSchema,
   type SetDefaultAccountAddressInput,
 } from "./schema"
 import type { SetDefaultAccountAddressActionState } from "./types"
 
-const loadAddresses = async (supabase: any, userId: string) => {
-  const { data, error } = await (supabase.from("user_addresses") as any)
+type UserAddressRow = Database["public"]["Tables"]["user_addresses"]["Row"]
+
+const loadAddresses = async (supabase: SupabaseClient<Database>, userId: string) => {
+  const { data, error } = await supabase
+    .from("user_addresses")
     .select("id, recipient_name, phone, base_address, detail_address, city, postal_code, is_default")
     .eq("user_id", userId)
     .order("is_default", { ascending: false })
@@ -16,7 +21,7 @@ const loadAddresses = async (supabase: any, userId: string) => {
 
   if (error) throw new Error(error.message)
 
-  return ((data ?? []) as Array<any>).map((row) => ({
+  return ((data ?? []) as UserAddressRow[]).map((row) => ({
     id: row.id,
     recipient_name: row.recipient_name,
     phone: row.phone,
@@ -55,12 +60,14 @@ export async function setDefaultAccountAddressAction(
       }
     }
 
-    const { error: clearError } = await (supabase.from("user_addresses") as any)
+    const { error: clearError } = await supabase
+      .from("user_addresses")
       .update({ is_default: false })
       .eq("user_id", user.id)
     if (clearError) throw new Error(clearError.message)
 
-    const { error: setError } = await (supabase.from("user_addresses") as any)
+    const { error: setError } = await supabase
+      .from("user_addresses")
       .update({ is_default: true })
       .eq("id", parsed.data.id)
       .eq("user_id", user.id)
@@ -80,4 +87,3 @@ export async function setDefaultAccountAddressAction(
     }
   }
 }
-

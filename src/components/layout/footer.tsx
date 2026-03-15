@@ -1,13 +1,40 @@
-﻿"use client"
+"use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import { subscribeNewsletterAction } from "@/components/layout/actions/subscribe-newsletter"
 
 export function Footer({ language }: { language?: "EN" | "KR" }) {
   const { t } = useI18n("layout.footer")
+  const [email, setEmail] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const shopLinks = [t("shopLinks.0"), t("shopLinks.1"), t("shopLinks.2"), t("shopLinks.3")]
   const infoLinks = [t("infoLinks.0"), t("infoLinks.1"), t("infoLinks.2"), t("infoLinks.3")]
+  const shopHrefs = ["/shop", "/shop", "/shop", "/shop"]
+  const infoHrefs = ["/about", "/shipping", "/returns", "/contact"]
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
+    setSubmitError(null)
+    setSubmitMessage(null)
+    const result = await subscribeNewsletterAction(email)
+    setIsSubmitting(false)
+
+    if (!result.success) {
+      setSubmitError(result.errorMessage ?? "Failed to subscribe")
+      return
+    }
+
+    setEmail("")
+    setSubmitMessage("Subscribed")
+  }
 
   return (
     <footer className="border-t-4 border-[#CCFF00] bg-[#0a0a0a] py-12 px-4 md:px-8">
@@ -19,46 +46,75 @@ export function Footer({ language }: { language?: "EN" | "KR" }) {
           </div>
 
           <div>
-            <h4 className="text-white text-lg font-bold uppercase tracking-wider mb-4 border-b-2 border-[#CCFF00] pb-2">{t("shop")}</h4>
+            <h4 className="text-white text-lg font-bold uppercase tracking-wider mb-4 border-b-2 border-[#CCFF00] pb-2">
+              {t("shop")}
+            </h4>
             <ul className="space-y-2">
               {shopLinks.map((link, i) => (
-                <li key={i}><Link href="#" className="text-[#888888] hover:text-[#CCFF00] transition-colors uppercase text-sm">{link}</Link></li>
+                <li key={i}>
+                  <Link href={shopHrefs[i]} className="text-[#888888] hover:text-[#CCFF00] transition-colors uppercase text-sm">
+                    {link}
+                  </Link>
+                </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white text-lg font-bold uppercase tracking-wider mb-4 border-b-2 border-[#CCFF00] pb-2">{t("info")}</h4>
+            <h4 className="text-white text-lg font-bold uppercase tracking-wider mb-4 border-b-2 border-[#CCFF00] pb-2">
+              {t("info")}
+            </h4>
             <ul className="space-y-2">
               {infoLinks.map((link, i) => (
-                <li key={i}><Link href="#" className="text-[#888888] hover:text-[#CCFF00] transition-colors uppercase text-sm">{link}</Link></li>
+                <li key={i}>
+                  <Link href={infoHrefs[i]} className="text-[#888888] hover:text-[#CCFF00] transition-colors uppercase text-sm">
+                    {link}
+                  </Link>
+                </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white text-lg font-bold uppercase tracking-wider mb-4 border-b-2 border-[#CCFF00] pb-2">{t("newsletter")}</h4>
-            <div className="flex">
-              <input
-                type="email"
-                placeholder={t("emailPlaceholder")}
-                className="flex-1 px-4 py-3 bg-[#1a1a1a] text-white border-4 border-[#CCFF00] border-r-0 placeholder:text-[#888888] focus:outline-none text-sm uppercase"
-              />
-              <button className="px-4 py-3 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors">
-                {t("joinBtn")}
-              </button>
-            </div>
+            <h4 className="text-white text-lg font-bold uppercase tracking-wider mb-4 border-b-2 border-[#CCFF00] pb-2">
+              {t("newsletter")}
+            </h4>
+            <form onSubmit={(e) => void handleSubmit(e)} className="space-y-2">
+              <div className="flex">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder={t("emailPlaceholder")}
+                  className="flex-1 px-4 py-3 bg-[#1a1a1a] text-white border-4 border-[#CCFF00] border-r-0 placeholder:text-[#888888] focus:outline-none text-sm uppercase"
+                />
+                <button
+                  disabled={isSubmitting}
+                  className="px-4 py-3 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? "..." : t("joinBtn")}
+                </button>
+              </div>
+              {submitMessage && <p className="text-[#00FF88] text-xs uppercase tracking-wider">{submitMessage}</p>}
+              {submitError && <p className="text-[#ff6666] text-xs uppercase tracking-wider">{submitError}</p>}
+            </form>
           </div>
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t-2 border-[#1a1a1a]">
           <p className="text-[#888888] text-sm uppercase">{t("copyright")}</p>
           <div className="flex gap-6">
-            <Link href="#" className="text-[#888888] hover:text-[#CCFF00] transition-colors text-sm uppercase">{t("privacy")}</Link>
-            <Link href="#" className="text-[#888888] hover:text-[#CCFF00] transition-colors text-sm uppercase">{t("terms")}</Link>
+            <Link href="/privacy" className="text-[#888888] hover:text-[#CCFF00] transition-colors text-sm uppercase">
+              {t("privacy")}
+            </Link>
+            <Link href="/terms" className="text-[#888888] hover:text-[#CCFF00] transition-colors text-sm uppercase">
+              {t("terms")}
+            </Link>
           </div>
         </div>
       </div>
     </footer>
   )
 }
+

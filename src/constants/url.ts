@@ -1,9 +1,17 @@
 export const APP_URLS = {
   home: '/',
   shop: '/shop',
+  about: '/about',
+  shipping: '/shipping',
+  returns: '/returns',
+  contact: '/contact',
+  privacy: '/privacy',
+  terms: '/terms',
   cart: '/cart',
   wishlist: '/wishlist',
   account: '/account',
   login: '/login',
+  signup: '/signup',
+  forgotPassword: '/forgot-password',
   authCallback: '/auth/callback',
 } as const

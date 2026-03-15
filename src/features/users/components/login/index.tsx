@@ -103,7 +103,7 @@ export function LoginView() {
               </div>
 
               <div className="text-right">
-                <Link href="#" className="text-[#888888] text-sm uppercase tracking-wider hover:text-[#CCFF00] transition-colors">
+                <Link href="/forgot-password" className="text-[#888888] text-sm uppercase tracking-wider hover:text-[#CCFF00] transition-colors">
                   {t("forgotPassword")}
                 </Link>
               </div>
@@ -159,7 +159,7 @@ export function LoginView() {
 
             <p className="text-center mt-8 text-[#888888] text-sm uppercase tracking-wider">
               {t("noAccount")} {" "}
-              <Link href="#" className="text-[#CCFF00] font-bold hover:text-white transition-colors">
+              <Link href="/signup" className="text-[#CCFF00] font-bold hover:text-white transition-colors">
                 {t("createOne")}
               </Link>
             </p>
