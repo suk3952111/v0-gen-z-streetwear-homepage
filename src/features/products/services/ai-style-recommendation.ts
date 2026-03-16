@@ -49,7 +49,7 @@ type ImageStyleAnalysis = {
 }
 
 const GEMINI_IMAGE_MODEL = "gemini-2.5-flash"
-const GEMINI_EMBEDDING_MODEL = "text-embedding-004"
+const GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
 const EMBEDDING_WEIGHT = 0.85
 const TAG_WEIGHT = 0.15
 
@@ -134,6 +134,7 @@ const callGeminiEmbedding = async (text: string) => {
       content: {
         parts: [{ text }],
       },
+      outputDimensionality: 768,
     }),
   })
 
