@@ -38,6 +38,7 @@ interface CartContextType {
   setQuantity: (entryKey: string, quantity: number) => Promise<void>
   removeFromCart: (entryKey: string) => Promise<void>
   cartCount: number
+  isHydrating: boolean
 }
 
 const LOCAL_CART_KEY = "vibe-check-cart"
@@ -48,6 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<CartEntry[]>([])
   const [storageMode, setStorageMode] = useState<"local" | "supabase">("local")
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [isHydrating, setIsHydrating] = useState(true)
 
   const loadLocalCart = useCallback(() => {
     const saved = localStorage.getItem(LOCAL_CART_KEY)
@@ -73,7 +75,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         console.log("[cart] loadSupabaseCart:success", { userId, count: rows.length })
       } catch {
         console.error("[cart] loadSupabaseCart:failed", { userId })
-        setEntries([])
       }
     },
     [supabase],
@@ -115,6 +116,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     let isActive = true
 
     const initialize = async () => {
+      setIsHydrating(true)
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -126,6 +128,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalCart()
+        setIsHydrating(false)
         return
       }
 
@@ -137,14 +140,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalCart()
+        setIsHydrating(false)
         return
       }
 
       console.log("[cart] initialize -> supabase mode", { userId: user.id })
       setStorageMode("supabase")
       setCurrentUserId(user.id)
-      await syncLocalToSupabase(user.id)
-      await loadSupabaseCart(user.id)
+      try {
+        await syncLocalToSupabase(user.id)
+        await loadSupabaseCart(user.id)
+      } catch {
+        setStorageMode("local")
+        setCurrentUserId(null)
+        loadLocalCart()
+      } finally {
+        if (isActive) setIsHydrating(false)
+      }
     }
 
     initialize()
@@ -152,12 +164,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setIsHydrating(true)
       const user = session?.user ?? null
       if (!user) {
         console.log("[cart] auth change -> local mode (signed out)")
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalCart()
+        setIsHydrating(false)
         return
       }
 
@@ -169,14 +183,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalCart()
+        setIsHydrating(false)
         return
       }
 
       console.log("[cart] auth change -> supabase mode", { userId: user.id })
       setStorageMode("supabase")
       setCurrentUserId(user.id)
-      await syncLocalToSupabase(user.id)
-      await loadSupabaseCart(user.id)
+      try {
+        await syncLocalToSupabase(user.id)
+        await loadSupabaseCart(user.id)
+      } catch {
+        setStorageMode("local")
+        setCurrentUserId(null)
+        loadLocalCart()
+      } finally {
+        setIsHydrating(false)
+      }
     })
 
     return () => {
@@ -287,6 +310,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setQuantity,
         removeFromCart,
         cartCount,
+        isHydrating,
       }}
     >
       {children}

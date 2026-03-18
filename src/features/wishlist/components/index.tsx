@@ -13,7 +13,7 @@ import type { ShopProductItem } from "@/features/products/types/shop"
 
 export function WishlistView() {
   const { locale, t } = useI18n("wishlist")
-  const { wishlist, removeFromWishlist } = useWishlist()
+  const { wishlist, removeFromWishlist, isHydrating } = useWishlist()
   const [wishlistProducts, setWishlistProducts] = useState<ShopProductItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
@@ -23,7 +23,9 @@ export function WishlistView() {
     const load = async () => {
       const slugs = wishlist.map((item) => item.product_id)
       if (slugs.length === 0) {
-        setWishlistProducts([])
+        if (!isHydrating) {
+          setWishlistProducts([])
+        }
         return
       }
 
@@ -33,7 +35,7 @@ export function WishlistView() {
         const products = await getProductsBySlugs(supabase, slugs)
         if (!cancelled) setWishlistProducts(products)
       } catch {
-        if (!cancelled) setWishlistProducts([])
+        // keep previous list on transient failures
       } finally {
         if (!cancelled) setIsLoading(false)
       }
@@ -43,7 +45,7 @@ export function WishlistView() {
     return () => {
       cancelled = true
     }
-  }, [wishlist])
+  }, [isHydrating, wishlist])
 
   const wishlistIdSet = useMemo(() => new Set(wishlist.map((w) => w.product_id)), [wishlist])
   const filteredWishlistProducts = useMemo(
@@ -82,7 +84,7 @@ export function WishlistView() {
             </div>
           </div>
 
-          {isLoading ? (
+          {(isHydrating || isLoading) ? (
             <div className="text-center py-20 border-4 border-dashed border-[#333333]">
               <p className="text-[#888888] text-xl uppercase tracking-wider">Loading wishlist...</p>
             </div>
