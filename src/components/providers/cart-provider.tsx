@@ -17,6 +17,7 @@ import {
   updateCartItemQuantity,
 } from "@/features/cart/services"
 import { ensureUserProfile } from "@/features/users/services"
+import { withTimeout } from "@/lib/utils/with-timeout"
 
 export type CartEntry = {
   key: string
@@ -123,7 +124,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     async (userId: string) => {
       try {
         console.log("[cart] loadSupabaseCart:start", { userId })
-        const rows = await getCartItemsByUserId(supabase, userId)
+        const rows = await withTimeout(getCartItemsByUserId(supabase, userId), 5000)
         setEntries(rows)
         console.log("[cart] loadSupabaseCart:success", { userId, count: rows.length })
       } catch (error) {
@@ -156,12 +157,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       for (const entry of localEntries) {
         try {
-          await addCartItem(
-            supabase,
-            userId,
-            entry.productId,
-            Math.max(1, entry.quantity),
-            entry.size,
+          await withTimeout(
+            addCartItem(
+              supabase,
+              userId,
+              entry.productId,
+              Math.max(1, entry.quantity),
+              entry.size,
+            ),
+            5000
           )
         } catch (error) {
           console.error("[cart] syncLocalToSupabase:item failed", {
@@ -198,7 +202,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        await ensureUserProfile(supabase, user)
+        await withTimeout(ensureUserProfile(supabase, user), 5000)
         console.log("[cart] ensureUserProfile:success", { userId: user.id })
       } catch (error) {
         console.error("[cart] ensureUserProfile:failed -> fallback local", {
@@ -248,7 +252,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        await ensureUserProfile(supabase, user)
+        await withTimeout(ensureUserProfile(supabase, user), 5000)
         console.log("[cart] auth change ensureUserProfile:success", { userId: user.id })
       } catch (error) {
         console.error("[cart] auth change ensureUserProfile:failed -> fallback local", {
@@ -266,7 +270,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setStorageMode("supabase")
       setCurrentUserId(user.id)
       try {
-        await syncLocalToSupabase(user.id)
+        await withTimeout(syncLocalToSupabase(user.id), 5000)
         await loadSupabaseCart(user.id)
       } catch (error) {
         console.error("[cart] auth change:syncOrLoad failed -> fallback local", {
@@ -323,7 +327,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (storageMode === "supabase" && currentUserId) {
         try {
-          await addCartItem(supabase, currentUserId, productId, quantity, size)
+          await withTimeout(addCartItem(supabase, currentUserId, productId, quantity, size), 5000)
           console.log("[cart] addToCart:supabase success", { productId, userId: currentUserId })
           await loadSupabaseCart(currentUserId)
         } catch (error) {
@@ -358,7 +362,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (storageMode === "supabase" && currentUserId && target.dbId) {
         try {
-          await updateCartItemQuantity(supabase, target.dbId, currentUserId, nextQuantity)
+          await withTimeout(updateCartItemQuantity(supabase, target.dbId, currentUserId, nextQuantity), 5000)
         } catch (error) {
           console.error("[cart] setQuantity:supabase failed", {
             entryKey,
@@ -379,7 +383,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (storageMode === "supabase" && currentUserId && target?.dbId) {
         try {
-          await removeCartItem(supabase, target.dbId, currentUserId)
+          await withTimeout(removeCartItem(supabase, target.dbId, currentUserId), 5000)
         } catch (error) {
           console.error("[cart] removeFromCart:supabase failed", {
             entryKey,
