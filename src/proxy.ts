@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { APP_URLS } from "@/constants/url"
 import { ADMIN_REQUIRED_PREFIXES, AUTH_REQUIRED_PREFIXES, USER_ROLES } from "@/constants/auth"
 import { getUserRoleById } from "@/features/users/services/get-user-role-by-id"
+import { withSupabaseErrorLogging } from "@/lib/supabase/error-logging"
 
 const LOGIN_PATH = APP_URLS.login
 const HOME_PATH = APP_URLS.home
@@ -30,7 +31,7 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request })
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+  const supabase = withSupabaseErrorLogging(createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll()
@@ -41,7 +42,7 @@ export async function proxy(request: NextRequest) {
         cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
       },
     },
-  })
+  }), "server")
 
   const {
     data: { user },

@@ -22,6 +22,7 @@ interface WishlistContextType {
   removeFromWishlist: (productId: string) => Promise<void>
   isInWishlist: (productId: string) => boolean
   wishlistCount: number
+  isHydrating: boolean
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined)
@@ -31,6 +32,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlist, setWishlist] = useState<WishlistItem[]>([])
   const [storageMode, setStorageMode] = useState<"local" | "supabase">("local")
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [isHydrating, setIsHydrating] = useState(true)
   const supabase = useMemo(() => createSupabaseClient(), [])
 
   const loadLocalWishlist = useCallback(() => {
@@ -55,7 +57,6 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         console.log("[wishlist] loadSupabaseWishlist:success", { userId, count: items.length })
       } catch {
         console.error("[wishlist] loadSupabaseWishlist:failed", { userId })
-        setWishlist([])
       }
     },
     [supabase],
@@ -89,6 +90,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     let isActive = true
 
     const initialize = async () => {
+      setIsHydrating(true)
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -100,6 +102,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalWishlist()
+        setIsHydrating(false)
         return
       }
 
@@ -111,15 +114,24 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalWishlist()
+        setIsHydrating(false)
         return
       }
 
       console.log("[wishlist] initialize -> supabase mode", { userId: user.id })
       setStorageMode("supabase")
       setCurrentUserId(user.id)
-      await syncLocalToSupabase(user.id)
-      if (!isActive) return
-      await loadSupabaseWishlist(user.id)
+      try {
+        await syncLocalToSupabase(user.id)
+        if (!isActive) return
+        await loadSupabaseWishlist(user.id)
+      } catch {
+        setStorageMode("local")
+        setCurrentUserId(null)
+        loadLocalWishlist()
+      } finally {
+        if (isActive) setIsHydrating(false)
+      }
     }
 
     initialize()
@@ -127,6 +139,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setIsHydrating(true)
       const user = session?.user ?? null
 
       if (!user) {
@@ -134,6 +147,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalWishlist()
+        setIsHydrating(false)
         return
       }
 
@@ -145,14 +159,23 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalWishlist()
+        setIsHydrating(false)
         return
       }
 
       console.log("[wishlist] auth change -> supabase mode", { userId: user.id })
       setStorageMode("supabase")
       setCurrentUserId(user.id)
-      await syncLocalToSupabase(user.id)
-      await loadSupabaseWishlist(user.id)
+      try {
+        await syncLocalToSupabase(user.id)
+        await loadSupabaseWishlist(user.id)
+      } catch {
+        setStorageMode("local")
+        setCurrentUserId(null)
+        loadLocalWishlist()
+      } finally {
+        setIsHydrating(false)
+      }
     })
 
     return () => {
@@ -233,6 +256,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         removeFromWishlist,
         isInWishlist,
         wishlistCount: wishlist.length,
+        isHydrating,
       }}
     >
       {children}

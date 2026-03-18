@@ -2,6 +2,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import type { Database } from '@/types/database.types'
+import { withSupabaseErrorLogging } from '@/lib/supabase/error-logging'
 
 let browserClient: SupabaseClient<Database> | null = null
 
@@ -17,7 +18,10 @@ export function createSupabaseClient() {
     throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
   }
 
-  browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
+  browserClient = withSupabaseErrorLogging(
+    createBrowserClient<Database>(supabaseUrl, supabaseAnonKey),
+    "browser",
+  )
   return browserClient
 }
 

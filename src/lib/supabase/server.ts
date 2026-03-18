@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 import type { Database } from '@/types/database.types'
+import { withSupabaseErrorLogging } from '@/lib/supabase/error-logging'
 
 export async function createSupabaseServer() {
   const cookieStore = await cookies()
@@ -13,7 +14,7 @@ export async function createSupabaseServer() {
     throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
   }
 
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return withSupabaseErrorLogging(createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll()
@@ -28,7 +29,7 @@ export async function createSupabaseServer() {
         }
       },
     },
-  })
+  }), "server")
 }
 
 export const getSupabaseServerClient = createSupabaseServer

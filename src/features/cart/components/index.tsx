@@ -27,8 +27,9 @@ type CartItemViewModel = {
 
 export function CartView() {
   const { locale, t } = useI18n("cart")
-  const { entries, setQuantity, removeFromCart } = useCart()
+  const { entries, setQuantity, removeFromCart, isHydrating } = useCart()
   const [productById, setProductById] = useState<Record<string, ShopProductItem>>({})
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
@@ -39,10 +40,14 @@ export function CartView() {
     const loadProducts = async () => {
       const slugs = [...new Set(entries.map((entry) => entry.productId))]
       if (slugs.length === 0) {
-        setProductById({})
+        if (!isHydrating) {
+          setProductById({})
+        }
+        setIsLoadingProducts(false)
         return
       }
 
+      setIsLoadingProducts(true)
       try {
         const supabase = createSupabaseClient()
         const products = await getProductsBySlugs(supabase, slugs)
@@ -53,8 +58,10 @@ export function CartView() {
         })
         setProductById(map)
       } catch {
+        // keep previous map on transient failures
+      } finally {
         if (!cancelled) {
-          setProductById({})
+          setIsLoadingProducts(false)
         }
       }
     }
@@ -63,7 +70,7 @@ export function CartView() {
     return () => {
       cancelled = true
     }
-  }, [entries])
+  }, [entries, isHydrating])
 
   const items = useMemo<CartItemViewModel[]>(() => {
     return entries
@@ -160,7 +167,13 @@ export function CartView() {
             <p className="mb-6 text-[#ff6666] text-sm uppercase tracking-wider">{checkoutError}</p>
           )}
 
-          {items.length === 0 ? (
+          {(isHydrating || isLoadingProducts) ? (
+            <div className="text-center py-20">
+              <p className="text-[#888888] text-2xl uppercase tracking-wider mb-8">
+                {locale === "KR" ? "장바구니 불러오는 중..." : "Loading cart..."}
+              </p>
+            </div>
+          ) : items.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-[#888888] text-2xl uppercase tracking-wider mb-8">{t("empty")}</p>
               <Link
@@ -353,4 +366,3 @@ export function CartView() {
     </main>
   )
 }
-
