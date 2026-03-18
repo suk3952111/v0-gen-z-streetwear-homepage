@@ -28,6 +28,48 @@ interface WishlistContextType {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined)
 const LOCAL_WISHLIST_KEY = "vibe-check-wishlist"
 
+const isNonEmptyString = (value: unknown): value is string => {
+  return typeof value === "string" && value.trim().length > 0
+}
+
+const getWishlistProductId = (item: unknown) => {
+  if (isNonEmptyString(item)) return item.trim()
+  if (!item || typeof item !== "object") return null
+
+  const record = item as Record<string, unknown>
+  if (isNonEmptyString(record.product_id)) return record.product_id.trim()
+  if (isNonEmptyString(record.productId)) return record.productId.trim()
+  if (isNonEmptyString(record.slug)) return record.slug.trim()
+  return null
+}
+
+const normalizeWishlistStorage = (raw: unknown): WishlistItem[] => {
+  if (!Array.isArray(raw)) return []
+
+  const now = new Date().toISOString()
+  const seen = new Set<string>()
+  const normalized: WishlistItem[] = []
+
+  raw.forEach((item, index) => {
+    const productId = getWishlistProductId(item)
+    if (!productId || seen.has(productId)) return
+
+    const record = item && typeof item === "object" ? (item as Record<string, unknown>) : null
+    const id = record && isNonEmptyString(record.id) ? record.id : `local-${productId}-${index}`
+    const created_at =
+      record && isNonEmptyString(record.created_at) ? record.created_at : now
+
+    seen.add(productId)
+    normalized.push({
+      id,
+      product_id: productId,
+      created_at,
+    })
+  })
+
+  return normalized
+}
+
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlist, setWishlist] = useState<WishlistItem[]>([])
   const [storageMode, setStorageMode] = useState<"local" | "supabase">("local")
@@ -39,7 +81,10 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(LOCAL_WISHLIST_KEY)
     if (saved) {
       try {
-        setWishlist(JSON.parse(saved))
+        const parsed = JSON.parse(saved) as unknown
+        const normalized = normalizeWishlistStorage(parsed)
+        setWishlist(normalized)
+        localStorage.setItem(LOCAL_WISHLIST_KEY, JSON.stringify(normalized))
         return
       } catch {
         // ignore parse error and fallback to empty
@@ -69,7 +114,8 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
       let localItems: WishlistItem[] = []
       try {
-        localItems = JSON.parse(saved)
+        const parsed = JSON.parse(saved) as unknown
+        localItems = normalizeWishlistStorage(parsed)
       } catch {
         localItems = []
       }

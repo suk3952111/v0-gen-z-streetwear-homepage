@@ -21,7 +21,13 @@ export function WishlistView() {
     let cancelled = false
 
     const load = async () => {
-      const slugs = wishlist.map((item) => item.product_id)
+      const slugs = [
+        ...new Set(
+          wishlist
+            .map((item) => item.product_id)
+            .filter((slug): slug is string => typeof slug === "string" && slug.trim().length > 0),
+        ),
+      ]
       if (slugs.length === 0) {
         if (!isHydrating) {
           setWishlistProducts([])
