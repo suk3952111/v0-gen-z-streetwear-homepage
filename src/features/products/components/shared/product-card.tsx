@@ -1,10 +1,10 @@
-﻿"use client"
+"use client"
 
 import React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
-import { Sparkles, Heart } from "lucide-react"
+import { Sparkles, Heart, Loader2 } from "lucide-react"
 import { useWishlist } from "@/components/providers/wishlist-provider"
 import { useCart } from "@/components/providers/cart-provider"
 
@@ -82,7 +82,11 @@ export function ProductCard({ id, name, price, aiMatch, image, category, currenc
           e.stopPropagation()
         }}
       >
-        <Heart className={`w-5 h-5 ${isWishlisted ? "fill-current" : ""}`} />
+        {isWishlistPending ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <Heart className={`w-5 h-5 ${isWishlisted ? "fill-current" : ""}`} />
+        )}
       </button>
 
       {showMatchBadge && (
@@ -109,7 +113,7 @@ export function ProductCard({ id, name, price, aiMatch, image, category, currenc
           <p className="text-[#CCFF00] text-2xl font-bold">{formatPrice(price, currency)}</p>
           <button
             onClick={(e) => void handleCartClick(e)}
-            className="relative z-30 min-w-20 px-4 py-2 bg-[#CCFF00] text-[#0a0a0a] text-sm font-bold uppercase hover:bg-white transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+            className="relative z-30 min-w-20 px-4 py-2 bg-[#CCFF00] text-[#0a0a0a] text-sm font-bold flex items-center justify-center gap-2 uppercase hover:bg-white transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             type="button"
             data-testid={`add-button-${id}`}
             disabled={isCartPending}
@@ -118,6 +122,7 @@ export function ProductCard({ id, name, price, aiMatch, image, category, currenc
               e.stopPropagation()
             }}
           >
+            {isCartPending && <Loader2 className="w-4 h-4 animate-spin -ml-1" />}
             {cartLabel}
           </button>
         </div>

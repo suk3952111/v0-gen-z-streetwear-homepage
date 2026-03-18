@@ -9,6 +9,7 @@ import {
   syncLocalWishlistToUser,
 } from "@/features/wishlist/services"
 import { ensureUserProfile } from "@/features/users/services"
+import { withTimeout } from "@/lib/utils/with-timeout"
 
 export interface WishlistItem {
   id: string
@@ -97,7 +98,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     async (userId: string) => {
       try {
         console.log("[wishlist] loadSupabaseWishlist:start", { userId })
-        const items = await getWishlistByUserId(supabase, userId)
+        const items = await withTimeout(getWishlistByUserId(supabase, userId), 5000)
         setWishlist(items)
         console.log("[wishlist] loadSupabaseWishlist:success", { userId, count: items.length })
       } catch (error) {
@@ -156,7 +157,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        await ensureUserProfile(supabase, user)
+        await withTimeout(ensureUserProfile(supabase, user), 5000)
         console.log("[wishlist] ensureUserProfile:success", { userId: user.id })
       } catch (error) {
         console.error("[wishlist] ensureUserProfile:failed -> fallback local", {
@@ -174,7 +175,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       setStorageMode("supabase")
       setCurrentUserId(user.id)
       try {
-        await syncLocalToSupabase(user.id)
+        await withTimeout(syncLocalToSupabase(user.id), 5000)
         if (!isActive) return
         await loadSupabaseWishlist(user.id)
       } catch (error) {
@@ -208,7 +209,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        await ensureUserProfile(supabase, user)
+        await withTimeout(ensureUserProfile(supabase, user), 5000)
         console.log("[wishlist] auth change ensureUserProfile:success", { userId: user.id })
       } catch (error) {
         console.error("[wishlist] auth change ensureUserProfile:failed -> fallback local", {
@@ -226,7 +227,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       setStorageMode("supabase")
       setCurrentUserId(user.id)
       try {
-        await syncLocalToSupabase(user.id)
+        await withTimeout(syncLocalToSupabase(user.id), 5000)
         await loadSupabaseWishlist(user.id)
       } catch (error) {
         console.error("[wishlist] auth change:syncOrLoad failed -> fallback local", {
@@ -267,7 +268,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     if (!isInWishlist(productId)) {
       if (storageMode === "supabase" && currentUserId) {
         try {
-          const inserted = await addWishlistItem(supabase, currentUserId, productId)
+          const inserted = await withTimeout(addWishlistItem(supabase, currentUserId, productId), 5000)
           setWishlist((prev) => [
             inserted,
             ...prev,
@@ -297,7 +298,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     if (storageMode === "supabase" && currentUserId) {
       const item = wishlist.find((w) => w.product_id === productId)
       try {
-        await removeWishlistItem(supabase, currentUserId, productId, item?.id)
+        await withTimeout(removeWishlistItem(supabase, currentUserId, productId, item?.id), 5000)
         console.log("[wishlist] removeFromWishlist:supabase success", { productId, userId: currentUserId })
       } catch (error) {
         console.error("[wishlist] removeFromWishlist:supabase failed", {
