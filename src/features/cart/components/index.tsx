@@ -38,7 +38,13 @@ export function CartView() {
     let cancelled = false
 
     const loadProducts = async () => {
-      const slugs = [...new Set(entries.map((entry) => entry.productId))]
+      const slugs = [
+        ...new Set(
+          entries
+            .map((entry) => entry.productId)
+            .filter((slug): slug is string => typeof slug === "string" && slug.trim().length > 0),
+        ),
+      ]
       if (slugs.length === 0) {
         if (!isHydrating) {
           setProductById({})

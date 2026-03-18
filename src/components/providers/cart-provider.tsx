@@ -44,6 +44,57 @@ interface CartContextType {
 const LOCAL_CART_KEY = "vibe-check-cart"
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
+const isNonEmptyString = (value: unknown): value is string => {
+  return typeof value === "string" && value.trim().length > 0
+}
+
+const toPositiveInt = (value: unknown, fallback: number) => {
+  const numberValue = typeof value === "number" ? value : Number(value)
+  if (!Number.isFinite(numberValue)) return fallback
+  return Math.max(1, Math.floor(numberValue))
+}
+
+const normalizeCartStorage = (raw: unknown): CartEntry[] => {
+  if (!Array.isArray(raw)) return []
+
+  const normalized: CartEntry[] = []
+  const seen = new Set<string>()
+
+  raw.forEach((item, index) => {
+    let productId: string | null = null
+    let size = "ONE SIZE"
+    let quantity = 1
+    let key = ""
+
+    if (isNonEmptyString(item)) {
+      productId = item.trim()
+    } else if (item && typeof item === "object") {
+      const record = item as Record<string, unknown>
+      if (isNonEmptyString(record.productId)) productId = record.productId.trim()
+      else if (isNonEmptyString(record.product_id)) productId = record.product_id.trim()
+      else if (isNonEmptyString(record.slug)) productId = record.slug.trim()
+
+      size = isNonEmptyString(record.size) ? record.size.trim() : "ONE SIZE"
+      quantity = toPositiveInt(record.quantity, 1)
+      key = isNonEmptyString(record.key) ? record.key : ""
+    }
+
+    if (!productId) return
+    const dedupeKey = `${productId}::${size}`
+    if (seen.has(dedupeKey)) return
+    seen.add(dedupeKey)
+
+    normalized.push({
+      key: key || `local-${productId}-${size}-${index}`,
+      productId,
+      quantity,
+      size,
+    })
+  })
+
+  return normalized
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createSupabaseClient(), [])
   const [entries, setEntries] = useState<CartEntry[]>([])
@@ -59,8 +110,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const parsed = JSON.parse(saved) as CartEntry[]
-      setEntries(Array.isArray(parsed) ? parsed : [])
+      const parsed = JSON.parse(saved) as unknown
+      const normalized = normalizeCartStorage(parsed)
+      setEntries(normalized)
+      localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(normalized))
     } catch {
       setEntries([])
     }
@@ -87,7 +140,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       let localEntries: CartEntry[] = []
       try {
-        localEntries = JSON.parse(saved) as CartEntry[]
+        const parsed = JSON.parse(saved) as unknown
+        localEntries = normalizeCartStorage(parsed)
       } catch {
         localEntries = []
       }
