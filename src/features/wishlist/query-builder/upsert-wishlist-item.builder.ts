@@ -9,5 +9,5 @@ export const upsertWishlistItemQueryBuilder = (
     .from("wishlists")
     .upsert(payload, { onConflict: "user_id,product_id" })
     .select("id, created_at")
-    .maybeSingle()
+  // NOTE: .maybeSingle() 제거 — 배치 upsert 시 PGRST116(multiple rows) 에러 방지
 }

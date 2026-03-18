@@ -26,10 +26,17 @@ export const addWishlistItem = async (
   ])
 
   if (error) {
+    console.error("[wishlist] addWishlistItem:upsert failed", {
+      productSlug,
+      userId,
+      message: error.message,
+      code: error.code,
+    })
     throw new Error(`Wishlist 추가 실패: ${error.message}`)
   }
 
-  const inserted = data as { id: string; created_at: string } | null
+  const rows = (data ?? []) as { id: string; created_at: string }[]
+  const inserted = rows[0] ?? null
   return {
     id: inserted?.id ?? `local-${Date.now()}`,
     product_id: productSlug,
