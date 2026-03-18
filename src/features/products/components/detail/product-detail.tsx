@@ -173,18 +173,21 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
           <div className="w-full lg:w-1/2 lg:pr-8">
             <motion.div
               layoutId={`focus-image-product-${productId}-${activeThumb}`}
-              className="relative aspect-[4/5] border-4 border-[#CCFF00] overflow-hidden cursor-zoom-in group"
-              onClick={() => openProductFocus(activeThumb)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter") openProductFocus(activeThumb) }}
-              aria-label={t("clickToZoom")}
+              className="relative aspect-[4/5] border-4 border-[#CCFF00] overflow-hidden group"
             >
               <div className="absolute inset-0 z-10 opacity-30 pointer-events-none mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
               <Image src={galleryImages[activeThumb] || "/placeholder.svg"} alt={product.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" priority />
               <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 <div className="px-4 py-2 bg-[#0a0a0a]/80 border-2 border-[#CCFF00] text-[#CCFF00] text-sm font-bold uppercase tracking-wider">{t("zoomHint")}</div>
               </div>
+              <button
+                type="button"
+                onClick={() => openProductFocus(activeThumb)}
+                className="absolute top-4 right-4 z-30 px-3 py-2 bg-[#0a0a0a]/80 border-2 border-[#CCFF00] text-[#CCFF00] text-xs font-bold uppercase tracking-wider hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors"
+                aria-label={t("clickToZoom")}
+              >
+                ZOOM
+              </button>
               <div className="absolute bottom-4 left-4 z-20 flex flex-wrap gap-2">
                 {product.tags.map((tag) => (
                   <span key={tag} className="px-2 py-1 text-xs font-bold uppercase bg-[#0a0a0a]/80 text-[#CCFF00] border border-[#CCFF00]">{tag}</span>
