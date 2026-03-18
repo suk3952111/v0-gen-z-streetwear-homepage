@@ -36,6 +36,12 @@ export const syncLocalWishlistToUser = async (
 
   const { error: upsertError } = await upsertWishlistItemQueryBuilder(supabaseClient, payload)
   if (upsertError) {
+    console.error("[wishlist] syncLocalWishlistToUser:upsert failed", {
+      userId,
+      payloadCount: payload.length,
+      message: upsertError.message,
+      code: upsertError.code,
+    })
     throw new Error(`로컬 Wishlist 동기화 실패: ${upsertError.message}`)
   }
 }

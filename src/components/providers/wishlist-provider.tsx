@@ -100,8 +100,11 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         const items = await getWishlistByUserId(supabase, userId)
         setWishlist(items)
         console.log("[wishlist] loadSupabaseWishlist:success", { userId, count: items.length })
-      } catch {
-        console.error("[wishlist] loadSupabaseWishlist:failed", { userId })
+      } catch (error) {
+        console.error("[wishlist] loadSupabaseWishlist:failed", {
+          userId,
+          message: error instanceof Error ? error.message : String(error),
+        })
       }
     },
     [supabase],
@@ -155,8 +158,11 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       try {
         await ensureUserProfile(supabase, user)
         console.log("[wishlist] ensureUserProfile:success", { userId: user.id })
-      } catch {
-        console.error("[wishlist] ensureUserProfile:failed -> fallback local", { userId: user.id })
+      } catch (error) {
+        console.error("[wishlist] ensureUserProfile:failed -> fallback local", {
+          userId: user.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalWishlist()
@@ -171,7 +177,11 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         await syncLocalToSupabase(user.id)
         if (!isActive) return
         await loadSupabaseWishlist(user.id)
-      } catch {
+      } catch (error) {
+        console.error("[wishlist] initialize:syncOrLoad failed -> fallback local", {
+          userId: user.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalWishlist()
@@ -200,8 +210,11 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       try {
         await ensureUserProfile(supabase, user)
         console.log("[wishlist] auth change ensureUserProfile:success", { userId: user.id })
-      } catch {
-        console.error("[wishlist] auth change ensureUserProfile:failed -> fallback local", { userId: user.id })
+      } catch (error) {
+        console.error("[wishlist] auth change ensureUserProfile:failed -> fallback local", {
+          userId: user.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalWishlist()
@@ -215,7 +228,11 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       try {
         await syncLocalToSupabase(user.id)
         await loadSupabaseWishlist(user.id)
-      } catch {
+      } catch (error) {
+        console.error("[wishlist] auth change:syncOrLoad failed -> fallback local", {
+          userId: user.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalWishlist()
@@ -257,7 +274,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
           ])
           console.log("[wishlist] addToWishlist:supabase success", { productId, userId: currentUserId })
         } catch (error) {
-          console.error("[wishlist] addToWishlist:supabase failed", {
+          console.error("[wishlist] addToWishlist:supabase failed -> fallback local", {
             productId,
             userId: currentUserId,
             message: error instanceof Error ? error.message : String(error),
@@ -282,8 +299,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       try {
         await removeWishlistItem(supabase, currentUserId, productId, item?.id)
         console.log("[wishlist] removeFromWishlist:supabase success", { productId, userId: currentUserId })
-      } catch {
-        console.error("[wishlist] removeFromWishlist:supabase failed", { productId, userId: currentUserId })
+      } catch (error) {
+        console.error("[wishlist] removeFromWishlist:supabase failed", {
+          productId,
+          userId: currentUserId,
+          message: error instanceof Error ? error.message : String(error),
+        })
       }
     }
 

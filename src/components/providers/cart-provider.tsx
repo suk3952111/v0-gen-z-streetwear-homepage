@@ -126,8 +126,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const rows = await getCartItemsByUserId(supabase, userId)
         setEntries(rows)
         console.log("[cart] loadSupabaseCart:success", { userId, count: rows.length })
-      } catch {
-        console.error("[cart] loadSupabaseCart:failed", { userId })
+      } catch (error) {
+        console.error("[cart] loadSupabaseCart:failed", {
+          userId,
+          message: error instanceof Error ? error.message : String(error),
+        })
       }
     },
     [supabase],
@@ -152,13 +155,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
 
       for (const entry of localEntries) {
-        await addCartItem(
-          supabase,
-          userId,
-          entry.productId,
-          Math.max(1, entry.quantity),
-          entry.size,
-        )
+        try {
+          await addCartItem(
+            supabase,
+            userId,
+            entry.productId,
+            Math.max(1, entry.quantity),
+            entry.size,
+          )
+        } catch (error) {
+          console.error("[cart] syncLocalToSupabase:item failed", {
+            productId: entry.productId,
+            userId,
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
       }
 
       localStorage.removeItem(LOCAL_CART_KEY)
@@ -189,8 +200,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         await ensureUserProfile(supabase, user)
         console.log("[cart] ensureUserProfile:success", { userId: user.id })
-      } catch {
-        console.error("[cart] ensureUserProfile:failed -> fallback local", { userId: user.id })
+      } catch (error) {
+        console.error("[cart] ensureUserProfile:failed -> fallback local", {
+          userId: user.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalCart()
@@ -204,7 +218,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         await syncLocalToSupabase(user.id)
         await loadSupabaseCart(user.id)
-      } catch {
+      } catch (error) {
+        console.error("[cart] initialize:syncOrLoad failed -> fallback local", {
+          userId: user.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalCart()
@@ -232,8 +250,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         await ensureUserProfile(supabase, user)
         console.log("[cart] auth change ensureUserProfile:success", { userId: user.id })
-      } catch {
-        console.error("[cart] auth change ensureUserProfile:failed -> fallback local", { userId: user.id })
+      } catch (error) {
+        console.error("[cart] auth change ensureUserProfile:failed -> fallback local", {
+          userId: user.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalCart()
@@ -247,7 +268,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         await syncLocalToSupabase(user.id)
         await loadSupabaseCart(user.id)
-      } catch {
+      } catch (error) {
+        console.error("[cart] auth change:syncOrLoad failed -> fallback local", {
+          userId: user.id,
+          message: error instanceof Error ? error.message : String(error),
+        })
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalCart()
@@ -332,7 +357,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       )
 
       if (storageMode === "supabase" && currentUserId && target.dbId) {
-        await updateCartItemQuantity(supabase, target.dbId, currentUserId, nextQuantity)
+        try {
+          await updateCartItemQuantity(supabase, target.dbId, currentUserId, nextQuantity)
+        } catch (error) {
+          console.error("[cart] setQuantity:supabase failed", {
+            entryKey,
+            dbId: target.dbId,
+            userId: currentUserId,
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
       }
     },
     [currentUserId, entries, storageMode, supabase],
@@ -344,7 +378,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setEntries((prev) => prev.filter((entry) => entry.key !== entryKey))
 
       if (storageMode === "supabase" && currentUserId && target?.dbId) {
-        await removeCartItem(supabase, target.dbId, currentUserId)
+        try {
+          await removeCartItem(supabase, target.dbId, currentUserId)
+        } catch (error) {
+          console.error("[cart] removeFromCart:supabase failed", {
+            entryKey,
+            dbId: target.dbId,
+            userId: currentUserId,
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
       }
     },
     [currentUserId, entries, storageMode, supabase],
