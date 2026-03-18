@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { APP_URLS } from '@/constants/url'
+import { ensureUserProfile } from '@/features/users/services'
 import { createSupabaseServer } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
@@ -17,6 +18,17 @@ export async function GET(request: Request) {
 
   const supabase = await createSupabaseServer()
   await supabase.auth.exchangeCodeForSession(code)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    try {
+      await ensureUserProfile(supabase, user)
+    } catch {
+      // Continue redirect flow; client providers can fallback to local storage mode.
+    }
+  }
 
   return NextResponse.redirect(redirectUrl)
 }

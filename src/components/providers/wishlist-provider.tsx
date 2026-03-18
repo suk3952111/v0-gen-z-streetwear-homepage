@@ -8,6 +8,7 @@ import {
   removeWishlistItem,
   syncLocalWishlistToUser,
 } from "@/features/wishlist/services"
+import { ensureUserProfile } from "@/features/users/services"
 
 export interface WishlistItem {
   id: string
@@ -98,6 +99,15 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      try {
+        await ensureUserProfile(supabase, user)
+      } catch {
+        setStorageMode("local")
+        setCurrentUserId(null)
+        loadLocalWishlist()
+        return
+      }
+
       setStorageMode("supabase")
       setCurrentUserId(user.id)
       await syncLocalToSupabase(user.id)
@@ -113,6 +123,15 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       const user = session?.user ?? null
 
       if (!user) {
+        setStorageMode("local")
+        setCurrentUserId(null)
+        loadLocalWishlist()
+        return
+      }
+
+      try {
+        await ensureUserProfile(supabase, user)
+      } catch {
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalWishlist()

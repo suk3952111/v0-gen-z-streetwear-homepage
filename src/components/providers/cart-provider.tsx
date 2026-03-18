@@ -16,6 +16,7 @@ import {
   removeCartItem,
   updateCartItemQuantity,
 } from "@/features/cart/services"
+import { ensureUserProfile } from "@/features/users/services"
 
 export type CartEntry = {
   key: string
@@ -124,6 +125,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      try {
+        await ensureUserProfile(supabase, user)
+      } catch {
+        setStorageMode("local")
+        setCurrentUserId(null)
+        loadLocalCart()
+        return
+      }
+
       setStorageMode("supabase")
       setCurrentUserId(user.id)
       await syncLocalToSupabase(user.id)
@@ -137,6 +147,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const user = session?.user ?? null
       if (!user) {
+        setStorageMode("local")
+        setCurrentUserId(null)
+        loadLocalCart()
+        return
+      }
+
+      try {
+        await ensureUserProfile(supabase, user)
+      } catch {
         setStorageMode("local")
         setCurrentUserId(null)
         loadLocalCart()
