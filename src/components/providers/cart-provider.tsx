@@ -191,6 +191,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [entries, storageMode])
 
+  const addLocalEntry = useCallback((productId: string, quantity: number, size: string) => {
+    setEntries((prev) => {
+      const existing = prev.find((entry) => entry.productId === productId && entry.size === size)
+      if (existing) {
+        return prev.map((entry) =>
+          entry.key === existing.key
+            ? { ...entry, quantity: Math.max(1, entry.quantity + quantity) }
+            : entry,
+        )
+      }
+      return [
+        ...prev,
+        {
+          key: crypto.randomUUID(),
+          productId,
+          quantity,
+          size,
+        },
+      ]
+    })
+  }, [])
+
   const addToCart = useCallback(
     async (productId: string, input?: AddToCartInput) => {
       const quantity = Math.max(1, Number(input?.quantity ?? 1))
@@ -208,32 +230,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
             userId: currentUserId,
             message: error instanceof Error ? error.message : String(error),
           })
+          setStorageMode("local")
+          setCurrentUserId(null)
+          addLocalEntry(productId, quantity, size)
+          console.log("[cart] addToCart:fallback local success", { productId, quantity, size })
         }
         return
       }
 
-      setEntries((prev) => {
-        const existing = prev.find((entry) => entry.productId === productId && entry.size === size)
-        if (existing) {
-          return prev.map((entry) =>
-            entry.key === existing.key
-              ? { ...entry, quantity: Math.max(1, entry.quantity + quantity) }
-              : entry,
-          )
-        }
-        return [
-          ...prev,
-          {
-            key: crypto.randomUUID(),
-            productId,
-            quantity,
-            size,
-          },
-        ]
-      })
+      addLocalEntry(productId, quantity, size)
       console.log("[cart] addToCart:local success", { productId, quantity, size })
     },
-    [currentUserId, loadSupabaseCart, storageMode, supabase],
+    [addLocalEntry, currentUserId, loadSupabaseCart, storageMode, supabase],
   )
 
   const setQuantity = useCallback(

@@ -167,6 +167,15 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     }
   }, [wishlist, storageMode])
 
+  const addLocalWishlistItem = useCallback((productId: string) => {
+    const newItem: WishlistItem = {
+      id: crypto.randomUUID(),
+      product_id: productId,
+      created_at: new Date().toISOString(),
+    }
+    setWishlist((prev) => [...prev, newItem])
+  }, [])
+
   const addToWishlist = async (productId: string) => {
     console.log("[wishlist] addToWishlist:click", { productId, storageMode, hasUser: Boolean(currentUserId) })
     if (!isInWishlist(productId)) {
@@ -178,18 +187,21 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
             ...prev,
           ])
           console.log("[wishlist] addToWishlist:supabase success", { productId, userId: currentUserId })
-        } catch {
-          console.error("[wishlist] addToWishlist:supabase failed", { productId, userId: currentUserId })
+        } catch (error) {
+          console.error("[wishlist] addToWishlist:supabase failed", {
+            productId,
+            userId: currentUserId,
+            message: error instanceof Error ? error.message : String(error),
+          })
+          setStorageMode("local")
+          setCurrentUserId(null)
+          addLocalWishlistItem(productId)
+          console.log("[wishlist] addToWishlist:fallback local success", { productId })
         }
         return
       }
 
-      const newItem: WishlistItem = {
-        id: crypto.randomUUID(),
-        product_id: productId,
-        created_at: new Date().toISOString(),
-      }
-      setWishlist((prev) => [...prev, newItem])
+      addLocalWishlistItem(productId)
       console.log("[wishlist] addToWishlist:local success", { productId })
     }
   }
