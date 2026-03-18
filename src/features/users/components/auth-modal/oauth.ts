@@ -27,6 +27,9 @@ export async function signInWithGoogleOAuth(): Promise<string | null> {
     provider: "google",
     options: {
       redirectTo,
+      queryParams: {
+        prompt: "select_account",
+      },
     },
   })
 

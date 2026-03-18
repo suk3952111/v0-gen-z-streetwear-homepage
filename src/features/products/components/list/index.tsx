@@ -9,30 +9,18 @@ import { useI18n } from "@/lib/i18n/use-i18n"
 import { loadShopProductsAction } from "@/features/products/actions/load-shop-products"
 import type { ShopInitialPayload, ShopProductItem } from "@/features/products/types/shop"
 
-function useThrottledValue<T>(value: T, intervalMs: number) {
-  const [throttled, setThrottled] = useState(value)
-  const lastRunRef = useRef(0)
+function useDebouncedValue<T>(value: T, delayMs: number) {
+  const [debounced, setDebounced] = useState(value)
 
   useEffect(() => {
-    const now = Date.now()
-    const elapsed = now - lastRunRef.current
-    const remaining = intervalMs - elapsed
-
-    if (remaining <= 0) {
-      lastRunRef.current = now
-      setThrottled(value)
-      return
-    }
-
     const timer = setTimeout(() => {
-      lastRunRef.current = Date.now()
-      setThrottled(value)
-    }, remaining)
+      setDebounced(value)
+    }, delayMs)
 
     return () => clearTimeout(timer)
-  }, [intervalMs, value])
+  }, [delayMs, value])
 
-  return throttled
+  return debounced
 }
 
 type ShopViewProps = {
@@ -54,7 +42,10 @@ export function ShopView({ initialData }: ShopViewProps) {
   const loadMoreLockRef = useRef(false)
   const skipFirstRefreshRef = useRef(true)
 
-  const throttledSearchQuery = useThrottledValue(searchQuery, 400)
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 700)
+  const isSearchTyping =
+    searchQuery.trim().length > 0 && searchQuery.trim() !== debouncedSearchQuery.trim()
+  const isSearchLoading = isSearchTyping || isRefreshing
 
   const toggleTag = (tag: string) => {
     setActiveTags((prev) => (prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]))
@@ -67,7 +58,7 @@ export function ShopView({ initialData }: ShopViewProps) {
   }
 
   const sortedTags = useMemo(() => [...activeTags].sort(), [activeTags])
-  const filterKey = `${throttledSearchQuery}|${activeCategory}|${sortedTags.join(",")}`
+  const filterKey = `${debouncedSearchQuery}|${activeCategory}|${sortedTags.join(",")}`
 
   useEffect(() => {
     if (skipFirstRefreshRef.current) {
@@ -77,9 +68,9 @@ export function ShopView({ initialData }: ShopViewProps) {
 
     let cancelled = false
     const refresh = async () => {
-      setIsRefreshing(true)
-      const result = await loadShopProductsAction({
-        searchQuery: throttledSearchQuery,
+        setIsRefreshing(true)
+        const result = await loadShopProductsAction({
+        searchQuery: debouncedSearchQuery,
         categorySlug: activeCategory,
         tagSlugs: sortedTags,
         offset: 0,
@@ -96,7 +87,7 @@ export function ShopView({ initialData }: ShopViewProps) {
     return () => {
       cancelled = true
     }
-  }, [filterKey, throttledSearchQuery, activeCategory, sortedTags])
+  }, [filterKey, debouncedSearchQuery, activeCategory, sortedTags])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -112,7 +103,7 @@ export function ShopView({ initialData }: ShopViewProps) {
         setIsLoadingMore(true)
         try {
           const result = await loadShopProductsAction({
-            searchQuery: throttledSearchQuery,
+            searchQuery: debouncedSearchQuery,
             categorySlug: activeCategory,
             tagSlugs: sortedTags,
             offset: nextOffset,
@@ -136,7 +127,7 @@ export function ShopView({ initialData }: ShopViewProps) {
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [activeCategory, hasMore, isRefreshing, nextOffset, sortedTags, throttledSearchQuery])
+  }, [activeCategory, hasMore, isRefreshing, nextOffset, sortedTags, debouncedSearchQuery])
 
   const hasActiveFilters = searchQuery || activeCategory !== "all" || activeTags.length > 0
 
@@ -169,10 +160,15 @@ export function ShopView({ initialData }: ShopViewProps) {
         />
 
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <p className="text-[#888888] text-sm font-bold uppercase tracking-wider">
               {t("resultsCount", { count: products.length })}
             </p>
+            {isSearchLoading && (
+              <p className="text-[#CCFF00] text-xs font-bold uppercase tracking-[0.2em] animate-pulse">
+                Searching...
+              </p>
+            )}
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}

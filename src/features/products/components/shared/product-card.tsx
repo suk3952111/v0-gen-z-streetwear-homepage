@@ -43,7 +43,12 @@ export function ProductCard({ id, name, price, aiMatch, image, category, currenc
   }
 
   return (
-    <Link href={`/product/${id}`} className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00] block">
+    <div className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00]">
+      <Link
+        href={`/product/${id}`}
+        className="absolute inset-0 z-10"
+        aria-label={`View ${safeName}`}
+      />
       <button
         onClick={(e) => void handleWishlistClick(e)}
         className={`absolute top-3 left-3 z-20 p-2 border-2 transition-all duration-300 ${
@@ -51,6 +56,7 @@ export function ProductCard({ id, name, price, aiMatch, image, category, currenc
             ? "bg-[#CCFF00] border-[#CCFF00] text-[#0a0a0a]"
             : "bg-[#0a0a0a]/80 border-[#CCFF00] text-[#CCFF00] hover:bg-[#CCFF00] hover:text-[#0a0a0a]"
         }`}
+        type="button"
       >
         <Heart className={`w-5 h-5 ${isWishlisted ? "fill-current" : ""}`} />
       </button>
@@ -74,12 +80,13 @@ export function ProductCard({ id, name, price, aiMatch, image, category, currenc
           <p className="text-[#CCFF00] text-2xl font-bold">{formatPrice(price, currency)}</p>
           <button
             onClick={(e) => void handleCartClick(e)}
-            className="px-4 py-2 bg-[#CCFF00] text-[#0a0a0a] text-sm font-bold uppercase hover:bg-white transition-colors"
+            className="relative z-20 px-4 py-2 bg-[#CCFF00] text-[#0a0a0a] text-sm font-bold uppercase hover:bg-white transition-colors"
+            type="button"
           >
             ADD
           </button>
         </div>
       </div>
-    </Link>
+    </div>
   )
 }
