@@ -60,6 +60,9 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
   const currentLanguage: Language = language ?? locale
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
+  const [sizeError, setSizeError] = useState(false)
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [cartFeedback, setCartFeedback] = useState<"idle" | "success" | "error">("idle")
   const [quantity, setQuantity] = useState(1)
   const [activeThumb, setActiveThumb] = useState(0)
   const [focusOpen, setFocusOpen] = useState(false)
@@ -122,8 +125,24 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
   }, [productFocusImages])
 
   const handleAddToCart = async () => {
-    if (!selectedSize || !product) return
-    await addToCart(product.id, { quantity, size: selectedSize })
+    if (!product) return
+    if (!selectedSize) {
+      setSizeError(true)
+      return
+    }
+    setSizeError(false)
+    setIsAddingToCart(true)
+    try {
+      await addToCart(product.id, { quantity, size: selectedSize })
+      setCartFeedback("success")
+    } catch {
+      setCartFeedback("error")
+    } finally {
+      setIsAddingToCart(false)
+      window.setTimeout(() => {
+        setCartFeedback("idle")
+      }, 1600)
+    }
   }
 
   if (!product) {
@@ -201,9 +220,14 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
               </div>
               <div className="flex flex-wrap gap-3">
                 {sizes.map((size) => (
-                  <button key={size} onClick={() => setSelectedSize(size)} className={`w-14 h-14 flex items-center justify-center font-bold text-lg uppercase border-4 transition-all ${selectedSize === size ? "bg-[#CCFF00] text-[#0a0a0a] border-[#CCFF00]" : "bg-[#0a0a0a] text-white border-[#CCFF00] hover:bg-[#1a1a1a]"}`}>{size}</button>
+                  <button key={size} onClick={() => { setSelectedSize(size); setSizeError(false) }} className={`w-14 h-14 flex items-center justify-center font-bold text-lg uppercase border-4 transition-all ${selectedSize === size ? "bg-[#CCFF00] text-[#0a0a0a] border-[#CCFF00]" : "bg-[#0a0a0a] text-white border-[#CCFF00] hover:bg-[#1a1a1a]"}`}>{size}</button>
                 ))}
               </div>
+              {sizeError ? (
+                <p className="mt-3 text-sm font-bold text-[#ff6b6b] uppercase tracking-wider">
+                  {currentLanguage === "KR" ? "사이즈를 선택해 주세요." : "Please select a size."}
+                </p>
+              ) : null}
             </div>
 
             <div className="mb-8">
@@ -217,12 +241,22 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
 
             <button
               onClick={() => void handleAddToCart()}
-              className="w-full py-6 bg-[#CCFF00] text-[#0a0a0a] text-2xl md:text-3xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-all hover:shadow-[8px_8px_0px_#CCFF00]"
-              disabled={!selectedSize}
-              style={{ opacity: selectedSize ? 1 : 0.6, cursor: selectedSize ? "pointer" : "not-allowed" }}
+              className="relative z-20 w-full py-6 bg-[#CCFF00] text-[#0a0a0a] text-2xl md:text-3xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-all hover:shadow-[8px_8px_0px_#CCFF00] disabled:opacity-70 disabled:cursor-not-allowed"
+              style={{ opacity: 1, cursor: "pointer" }}
+              disabled={isAddingToCart}
             >
-              {t("addToVibe")}
+              {isAddingToCart ? (currentLanguage === "KR" ? "추가 중..." : "ADDING...") : t("addToVibe")}
             </button>
+            {cartFeedback === "success" ? (
+              <p className="mt-3 text-sm font-bold text-[#CCFF00] uppercase tracking-wider">
+                {currentLanguage === "KR" ? "바이브백에 추가되었습니다." : "Added to Vibe Bag."}
+              </p>
+            ) : null}
+            {cartFeedback === "error" ? (
+              <p className="mt-3 text-sm font-bold text-[#ff6b6b] uppercase tracking-wider">
+                {currentLanguage === "KR" ? "추가에 실패했습니다. 다시 시도해 주세요." : "Failed to add. Please try again."}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
