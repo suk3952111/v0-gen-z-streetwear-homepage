@@ -1,66 +1,66 @@
 ﻿# VIBE CHECK
 
-Gen-Z 스트릿웨어 콘셉트의 Next.js 16 기반 쇼핑 프로젝트입니다.
+**VIBE CHECK**는 Gen-Z 스트릿웨어 감성에 맞춘 커머스 경험을 만드는 Next.js 기반 쇼핑 프로젝트입니다.  
+단순 상품 나열이 아니라, AI 기반 스타일 탐색과 개인화된 쇼핑 흐름을 중심으로 설계했습니다.
 
-## 핵심 정보
+## 프로젝트 소개
 
-- 프레임워크: Next.js 16 + React 19 + TypeScript
-- 스타일: Tailwind CSS 4
-- 백엔드: Supabase (Auth + Database + Storage)
-- 다국어: EN/KR 메시지 구조
+- 콘셉트: 스트릿웨어 브랜드의 온라인 스토어 + 스타일 큐레이션
+- 목표: 탐색부터 구매, 계정 관리, 운영 관리까지 하나의 제품으로 통합
+- 사용자: 일반 고객(쇼핑), 회원(위시/주문관리), 관리자(주문/운영)
+
+## 핵심 기능
+
+### 쇼핑 경험
+
+- 홈/샵/상세 페이지 기반 상품 탐색
+- 장바구니, 위시리스트, 체크아웃까지 이어지는 구매 플로우
+- 배송/반품/정책 페이지 포함한 실서비스형 정보 구조
+
+### 계정 및 주문
+
+- Supabase Auth 기반 로그인/회원가입
+- 마이페이지에서 프로필/배송지 CRUD
+- 주문 생성, 주문/결제 상태 갱신, 주문 목록 조회
+
+### 리뷰 및 콘텐츠
+
+- 상품 리뷰 조회/등록/정렬
+- 이미지 포함 리뷰 업로드 지원
+- 뉴스레터 구독 연동
+
+### AI 스타일 기능
+
+- 이미지 업로드 기반 비주얼 검색
+- 임베딩 + 태그 기반 상품 매칭
+- 스타일 추천 확장 가능한 구조
+
+### 운영(관리자)
+
+- 관리자 대시보드 통계
+- 주문 목록 페이징 조회 및 운영 데이터 확인
 
 ## 주요 페이지
 
-- `/` 홈
-- `/shop` 상품 목록
-- `/product/[id]` 상품 상세
-- `/cart` 장바구니
-- `/wishlist` 위시리스트
-- `/login` 로그인/회원가입
-- `/account` 계정
-- `/admin` 관리자
-- `/about`, `/shipping`, `/returns`, `/contact`, `/privacy`, `/terms`
-- `/forgot-password`, `/signup`
+- 고객 영역: `/`, `/shop`, `/product/[id]`, `/cart`, `/wishlist`
+- 계정 영역: `/login`, `/signup`, `/forgot-password`, `/account`
+- 운영 영역: `/admin`
+- 정보 페이지: `/about`, `/shipping`, `/returns`, `/contact`, `/privacy`, `/terms`
 
-## 실행 방법
+## 기술 구성
 
-```bash
-pnpm install
-pnpm dev
-```
+- Frontend: Next.js 16, React 19, TypeScript
+- UI: Tailwind CSS 4
+- Backend: Supabase (Auth, Database, Storage)
+- Language: EN/KR 메시지 구조
 
-브라우저에서 `http://localhost:3000` 접속
+## 현재 상태
 
-## 환경 변수
+- 핵심 커머스 기능과 인증/주문/리뷰/관리자 기능 연동 완료
+- AI 비주얼 검색 기능 연동 완료
+- 타입 안정성 강화(`database.types.ts` 기반)
 
-`.env.local`:
+## 진행 예정
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-GEMINI_API_KEY=your_gemini_api_key
-```
-
-## Supabase 마이그레이션
-
-- `supabase/migrations/20260221_init_schema.sql`
-- `supabase/migrations/20260302_product_image_caption_embedding_search.sql`
-- `supabase/migrations/20260315_fix_orders_rls_recursion.sql`
-- `supabase/migrations/20260316_newsletter_subscribers.sql`
-
-## 현재 구현 상태
-
-- 인증(로그인/회원가입): Supabase Auth 연동
-- 리뷰: Supabase 조회/서버 정렬/등록(이미지 포함) 연동
-- 마이페이지(Account): 프로필/배송지 CRUD/주문 목록 연동
-- 관리자(Admin): 대시보드 통계 + 주문 페이징 조회 연동
-- 체크아웃: 주문 생성 + 결제/주문 상태 갱신 + 장바구니 비우기 연동
-- AI 비주얼 검색: 이미지 업로드 후 임베딩 + 태그 기반 Supabase 검색 연동
-- Placeholder 링크/동작: 실제 라우트 및 뉴스레터 제출 연동
-- 타입: `database.types.ts` 실스키마 반영 완료 (`as any` 제거)
-
-## 남은 주요 작업
-
-- 상품 상세 단건 조회를 mock에서 Supabase 완전 전환
-- 상품 상세의 유사 상품 추천 로직을 Supabase 쿼리 기반으로 전환
+- 상품 상세 단건 조회의 Supabase 완전 전환
+- 유사 상품 추천의 Supabase 쿼리 고도화
