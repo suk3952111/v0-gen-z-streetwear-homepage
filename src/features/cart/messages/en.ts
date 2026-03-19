@@ -16,4 +16,5 @@ export const cartEnMessages = {
   orderNumber: "ORDER #",
   date: "DATE",
   items: "ITEMS",
+  loginRequiredRedirect: "Please log in to purchase. Redirecting to the login page.",
 } as const

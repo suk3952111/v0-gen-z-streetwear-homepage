@@ -1,9 +1,9 @@
-export const cartKrMessages = {
+﻿export const cartKrMessages = {
   title: "VIBE",
   titleAccent: "BAG",
   empty: "장바구니가 비어 있습니다",
   shopNow: "쇼핑 시작하기",
-  remove: "삭제",
+  remove: "제거",
   quantity: "수량",
   subtotal: "상품 금액",
   shipping: "배송비",
@@ -16,4 +16,5 @@ export const cartKrMessages = {
   orderNumber: "주문번호 #",
   date: "날짜",
   items: "상품 목록",
+  loginRequiredRedirect: "로그인 후 구매 가능합니다. 로그인 페이지로 이동합니다.",
 } as const

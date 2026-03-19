@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Minus, Plus, Sparkles, X } from "lucide-react"
+import { APP_URLS } from "@/constants/url"
 import { vibeCategories } from "@/mocks/cart"
 import { useI18n } from "@/lib/i18n/use-i18n"
 import { NoiseOverlay } from "@/components/ui"
@@ -27,6 +29,7 @@ type CartItemViewModel = {
 
 export function CartView() {
   const { locale, t } = useI18n("cart")
+  const router = useRouter()
   const { entries, setQuantity, removeFromCart, isHydrating } = useCart()
   const [productById, setProductById] = useState<Record<string, ShopProductItem>>({})
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
@@ -121,7 +124,15 @@ export function CartView() {
     setIsCheckingOut(false)
 
     if (!response.success || !response.data) {
-      setCheckoutError(response.errorMessage ?? "Checkout failed")
+      const errorMessage = response.errorMessage ?? "Checkout failed"
+      if (errorMessage === "Login required") {
+        setCheckoutError(t("loginRequiredRedirect"))
+        setTimeout(() => {
+          router.push(`${APP_URLS.login}?next=${encodeURIComponent(APP_URLS.cart)}`)
+        }, 500)
+        return
+      }
+      setCheckoutError(errorMessage)
       return
     }
 
