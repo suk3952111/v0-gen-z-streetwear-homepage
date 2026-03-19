@@ -1,7 +1,7 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Search, X, ChevronUp, ChevronDown } from "lucide-react"
+import { Search, X, ChevronUp } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { ShopFilterOption } from "@/features/products/types/shop"
 
@@ -11,9 +11,12 @@ interface CollapsibleFilterBarProps {
   onSearchChange: (query: string) => void
   activeCategory: string
   onCategoryChange: (category: string) => void
+  activeBrand: string
+  onBrandChange: (brand: string) => void
   activeTags: string[]
   onToggleTag: (tag: string) => void
   categories: ShopFilterOption[]
+  brands: ShopFilterOption[]
   tags: ShopFilterOption[]
   content: {
     title: string
@@ -23,14 +26,16 @@ interface CollapsibleFilterBarProps {
 }
 
 export function CollapsibleFilterBar({
-  language,
   searchQuery,
   onSearchChange,
   activeCategory,
   onCategoryChange,
+  activeBrand,
+  onBrandChange,
   activeTags,
   onToggleTag,
   categories,
+  brands,
   tags,
   content,
 }: CollapsibleFilterBarProps) {
@@ -43,12 +48,9 @@ export function CollapsibleFilterBar({
     const currentScrollY = window.scrollY
 
     if (manualOverride !== null) {
-      // 사용자가 수동으로 토글한 경우, 반대 방향으로 임계값을 넘겨 스크롤할 때까지 상태를 유지
       if (manualOverride && currentScrollY < 50) {
-        // 수동 확장 후 다시 상단으로 스크롤하면 수동 상태 해제
         setManualOverride(null)
       } else if (!manualOverride && currentScrollY > lastScrollY.current + 80) {
-        // 수동 축소 후 계속 아래로 스크롤하면 수동 상태 해제
         setManualOverride(null)
       }
       lastScrollY.current = currentScrollY
@@ -88,7 +90,6 @@ export function CollapsibleFilterBar({
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8">
-        {/* 페이지 제목 - 접힌 상태에서는 숨김 */}
         <AnimatePresence initial={false}>
           {!collapsed && (
             <motion.div
@@ -108,7 +109,6 @@ export function CollapsibleFilterBar({
           )}
         </AnimatePresence>
 
-        {/* 검색 바 - 접히면 축소 */}
         <motion.div
           className="relative"
           animate={{ marginBottom: collapsed ? 8 : 24 }}
@@ -144,13 +144,8 @@ export function CollapsibleFilterBar({
           )}
         </motion.div>
 
-        {/* 카테고리 탭 - 접히면 가로 스크롤, 펼치면 줄바꿈 */}
         <motion.div
-          className={`${
-            collapsed
-              ? "flex gap-2 overflow-x-auto scrollbar-hide pb-1"
-              : "flex flex-wrap gap-2 mb-4"
-          }`}
+          className={`${collapsed ? "flex gap-2 overflow-x-auto scrollbar-hide pb-1" : "flex flex-wrap gap-2 mb-4"}`}
           animate={{ marginBottom: collapsed ? 8 : 16 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           style={collapsed ? { scrollbarWidth: "none", msOverflowStyle: "none" } : {}}
@@ -181,13 +176,40 @@ export function CollapsibleFilterBar({
           })}
         </motion.div>
 
-        {/* 태그 필터 - 접히면 가로 스크롤, 펼치면 줄바꿈 */}
         <motion.div
-          className={`${
-            collapsed
-              ? "flex gap-2 overflow-x-auto scrollbar-hide"
-              : "flex flex-wrap gap-2"
-          }`}
+          className={`${collapsed ? "flex gap-2 overflow-x-auto scrollbar-hide pb-1" : "flex flex-wrap gap-2 mb-4"}`}
+          animate={{ marginBottom: collapsed ? 8 : 16 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          style={collapsed ? { scrollbarWidth: "none", msOverflowStyle: "none" } : {}}
+        >
+          {brands.map((brand) => {
+            const isActive = activeBrand === brand.value
+            return (
+              <motion.button
+                key={brand.value}
+                onClick={() => onBrandChange(brand.value)}
+                className={`font-bold uppercase tracking-wider border-4 transition-colors whitespace-nowrap ${
+                  isActive
+                    ? "bg-[#CCFF00] text-[#0a0a0a] border-[#CCFF00]"
+                    : "bg-[#0a0a0a] text-[#CCFF00] border-[#CCFF00] hover:bg-[#1a1a1a]"
+                }`}
+                animate={{
+                  paddingLeft: collapsed ? 12 : 20,
+                  paddingRight: collapsed ? 12 : 20,
+                  paddingTop: collapsed ? 6 : 12,
+                  paddingBottom: collapsed ? 6 : 12,
+                  fontSize: collapsed ? 12 : 14,
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              >
+                {brand.label}
+              </motion.button>
+            )
+          })}
+        </motion.div>
+
+        <motion.div
+          className={`${collapsed ? "flex gap-2 overflow-x-auto scrollbar-hide" : "flex flex-wrap gap-2"}`}
           style={collapsed ? { scrollbarWidth: "none", msOverflowStyle: "none" } : {}}
         >
           {tags.map((tag) => {
@@ -217,7 +239,6 @@ export function CollapsibleFilterBar({
         </motion.div>
       </div>
 
-      {/* 수동 토글 버튼 */}
       <button
         onClick={toggleManual}
         className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-50 w-8 h-8 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00] flex items-center justify-center hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors"
@@ -231,7 +252,6 @@ export function CollapsibleFilterBar({
         </motion.div>
       </button>
 
-      {/* 웹킷 브라우저용 스크롤바 숨김 */}
       <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;

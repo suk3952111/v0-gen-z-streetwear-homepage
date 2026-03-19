@@ -15,6 +15,7 @@ export type ShopProductItem = {
     KR: string
   }
   tags: string[]
+  sizes: string[]
 }
 
 export type ShopProductsPage = {
@@ -25,6 +26,7 @@ export type ShopProductsPage = {
 
 export type ShopInitialPayload = {
   categories: ShopFilterOption[]
+  brands: ShopFilterOption[]
   tags: ShopFilterOption[]
   page: ShopProductsPage
 }

@@ -1,7 +1,7 @@
 "use server"
 
 import { createSupabaseServer } from "@/lib/supabase/server"
-import { recommendSimilarProductsByAi } from "@/features/products/services"
+import { recommendSimilarProductsByTags } from "@/features/products/services"
 import {
   RecommendSimilarStyleSchema,
   type RecommendSimilarStyleInput,
@@ -21,7 +21,8 @@ export async function recommendSimilarStyleAction(
 
   try {
     const supabase = await createSupabaseServer()
-    const result = await recommendSimilarProductsByAi(supabase, parsed.data)
+    // const result = await recommendSimilarProductsByAi(supabase, parsed.data)
+    const result = await recommendSimilarProductsByTags(supabase, parsed.data)
     return {
       success: true,
       data: result,

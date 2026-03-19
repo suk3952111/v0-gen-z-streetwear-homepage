@@ -5,6 +5,7 @@ type ListProductsBuilderParams = {
   offset: number
   limitPlusOne: number
   categoryId?: string | null
+  brandId?: string | null
   searchQuery?: string
   productIds?: string[] | null
 }
@@ -13,7 +14,7 @@ export const listProductsQueryBuilder = (
   supabaseClient: SupabaseClient<Database>,
   params: ListProductsBuilderParams,
 ) => {
-  const { offset, limitPlusOne, categoryId, searchQuery, productIds } = params
+  const { offset, limitPlusOne, categoryId, brandId, searchQuery, productIds } = params
 
   let query: any = supabaseClient
     .from("products")
@@ -23,6 +24,10 @@ export const listProductsQueryBuilder = (
 
   if (categoryId) {
     query = query.eq("category_id", categoryId)
+  }
+
+  if (brandId) {
+    query = query.eq("brand_id", brandId)
   }
 
   if (searchQuery && searchQuery.trim()) {

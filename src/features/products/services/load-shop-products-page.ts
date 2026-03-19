@@ -1,25 +1,36 @@
-import type { Database } from "@/types/database.types"
+﻿import type { Database } from "@/types/database.types"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { getCategoriesByIdsQueryBuilder } from "@/features/products/query-builder/get-categories-by-ids.builder"
+import { getBrandBySlugQueryBuilder } from "@/features/products/query-builder/get-brand-by-slug.builder"
 import { getCategoryBySlugQueryBuilder } from "@/features/products/query-builder/get-category-by-slug.builder"
 import { getProductImagesByProductIdsQueryBuilder } from "@/features/products/query-builder/get-product-images-by-product-ids.builder"
 import { getProductTagRelationsByProductIdsQueryBuilder } from "@/features/products/query-builder/get-product-tag-relations-by-product-ids.builder"
 import { getProductTagRelationsByTagIdsQueryBuilder } from "@/features/products/query-builder/get-product-tag-relations-by-tag-ids.builder"
 import { getProductTagsByIdsQueryBuilder } from "@/features/products/query-builder/get-product-tags-by-ids.builder"
 import { getProductTagsBySlugsQueryBuilder } from "@/features/products/query-builder/get-product-tags-by-slugs.builder"
+import { getProductVariantsByProductIdsQueryBuilder } from "@/features/products/query-builder/get-product-variants-by-product-ids.builder"
 import { listProductsQueryBuilder } from "@/features/products/query-builder/list-products.builder"
-import { ALL_CATEGORY_VALUE } from "@/features/products/services/load-shop-filters"
+import { ALL_BRAND_VALUE, ALL_CATEGORY_VALUE } from "@/features/products/services/load-shop-filters"
 import type { ShopProductsPage } from "@/features/products/types/shop"
 
 export type LoadShopProductsParams = {
   searchQuery?: string
   categorySlug?: string
+  brandSlug?: string
   tagSlugs?: string[]
   offset?: number
   limit?: number
 }
 
 const DEFAULT_LIMIT = 16
+const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "ONE SIZE"]
+const SIZE_RANK = new Map(SIZE_ORDER.map((size, index) => [size, index]))
+
+const toSortedSizes = (sizes: string[]) => {
+  return [...new Set(sizes.map((size) => size.trim().toUpperCase()).filter(Boolean))].sort(
+    (a, b) => (SIZE_RANK.get(a) ?? 999) - (SIZE_RANK.get(b) ?? 999) || a.localeCompare(b),
+  )
+}
 
 export const loadShopProductsPage = async (
   supabaseClient: SupabaseClient<Database>,
@@ -27,6 +38,7 @@ export const loadShopProductsPage = async (
 ): Promise<ShopProductsPage> => {
   const searchQuery = params.searchQuery?.trim() ?? ""
   const categorySlug = params.categorySlug ?? ALL_CATEGORY_VALUE
+  const brandSlug = params.brandSlug ?? ALL_BRAND_VALUE
   const tagSlugs = params.tagSlugs ?? []
   const offset = Math.max(0, params.offset ?? 0)
   const limit = Math.max(1, Math.min(40, params.limit ?? DEFAULT_LIMIT))
@@ -38,7 +50,7 @@ export const loadShopProductsPage = async (
       tagSlugs,
     )
     if (tagError) {
-      throw new Error(`태그 필터 조회 실패: ${tagError.message}`)
+      throw new Error(`Failed to fetch tags: ${tagError.message}`)
     }
 
     const tags = (tagRows ?? []) as Array<{ id: string; slug: string }>
@@ -52,7 +64,7 @@ export const loadShopProductsPage = async (
       tagIds,
     )
     if (relationError) {
-      throw new Error(`태그 관계 조회 실패: ${relationError.message}`)
+      throw new Error(`Failed to fetch tag relations: ${relationError.message}`)
     }
 
     const relationRows = (relations ?? []) as Array<{ product_id: string; tag_id: string }>
@@ -69,7 +81,7 @@ export const loadShopProductsPage = async (
       categorySlug,
     )
     if (categoryError) {
-      throw new Error(`카테고리 조회 실패: ${categoryError.message}`)
+      throw new Error(`Failed to fetch category: ${categoryError.message}`)
     }
     const categoryRow = category as { id: string; slug: string } | null
     if (!categoryRow?.id) {
@@ -78,16 +90,33 @@ export const loadShopProductsPage = async (
     categoryId = categoryRow.id
   }
 
+  let brandId: string | null = null
+  if (brandSlug !== ALL_BRAND_VALUE) {
+    const { data: brand, error: brandError } = await getBrandBySlugQueryBuilder(
+      supabaseClient,
+      brandSlug,
+    )
+    if (brandError) {
+      throw new Error(`Failed to fetch brand: ${brandError.message}`)
+    }
+    const brandRow = brand as { id: string; slug: string } | null
+    if (!brandRow?.id) {
+      return { items: [], hasMore: false, nextOffset: 0 }
+    }
+    brandId = brandRow.id
+  }
+
   const { data: productRowsData, error: productRowsError } = await listProductsQueryBuilder(supabaseClient, {
     offset,
     limitPlusOne: limit + 1,
     categoryId,
+    brandId,
     searchQuery,
     productIds: filteredProductIds,
   })
 
   if (productRowsError) {
-    throw new Error(`상품 조회 실패: ${productRowsError.message}`)
+    throw new Error(`Failed to fetch products: ${productRowsError.message}`)
   }
 
   const productRows = (productRowsData ?? []) as Array<{
@@ -111,15 +140,18 @@ export const loadShopProductsPage = async (
     { data: categoriesData, error: categoriesError },
     { data: imagesData, error: imagesError },
     { data: tagRelationsData, error: tagRelationsError },
+    { data: variantsData, error: variantsError },
   ] = await Promise.all([
     getCategoriesByIdsQueryBuilder(supabaseClient, categoryIds),
     getProductImagesByProductIdsQueryBuilder(supabaseClient, productIds),
     getProductTagRelationsByProductIdsQueryBuilder(supabaseClient, productIds),
+    getProductVariantsByProductIdsQueryBuilder(supabaseClient, productIds),
   ])
 
-  if (categoriesError) throw new Error(`카테고리 매핑 조회 실패: ${categoriesError.message}`)
-  if (imagesError) throw new Error(`상품 이미지 조회 실패: ${imagesError.message}`)
-  if (tagRelationsError) throw new Error(`상품 태그 관계 조회 실패: ${tagRelationsError.message}`)
+  if (categoriesError) throw new Error(`Failed to fetch categories: ${categoriesError.message}`)
+  if (imagesError) throw new Error(`Failed to fetch images: ${imagesError.message}`)
+  if (tagRelationsError) throw new Error(`Failed to fetch product tags: ${tagRelationsError.message}`)
+  if (variantsError) throw new Error(`Failed to fetch product sizes: ${variantsError.message}`)
 
   const categories = (categoriesData ?? []) as Array<{ id: string; name: string }>
   const images = (imagesData ?? []) as Array<{
@@ -129,6 +161,7 @@ export const loadShopProductsPage = async (
     display_order: number
   }>
   const tagRelations = (tagRelationsData ?? []) as Array<{ product_id: string; tag_id: string }>
+  const variants = (variantsData ?? []) as Array<{ product_id: string; size: string; is_active: boolean }>
 
   const categoryNameById = new Map(categories.map((category) => [category.id, category.name]))
   const primaryImageByProductId = new Map<string, string>()
@@ -146,7 +179,7 @@ export const loadShopProductsPage = async (
       tagIds,
     )
     if (tagsError) {
-      throw new Error(`태그 조회 실패: ${tagsError.message}`)
+      throw new Error(`Failed to fetch tags: ${tagsError.message}`)
     }
     const tags = (tagsData ?? []) as Array<{ id: string; name: string }>
     tagNameById = new Map(tags.map((tag) => [tag.id, tag.name]))
@@ -162,9 +195,25 @@ export const loadShopProductsPage = async (
     tagNamesByProductId.set(relation.product_id, list)
   })
 
+  const rawSizesByProductId = new Map<string, string[]>()
+  variants.forEach((variant) => {
+    const normalized = (variant.size ?? "").trim().toUpperCase()
+    if (!normalized) return
+    const list = rawSizesByProductId.get(variant.product_id) ?? []
+    list.push(normalized)
+    rawSizesByProductId.set(variant.product_id, list)
+  })
+
+  const sizesByProductId = new Map<string, string[]>()
+  rawSizesByProductId.forEach((sizes, productId) => {
+    sizesByProductId.set(productId, toSortedSizes(sizes))
+  })
+
   const items = pageRows.map((row) => {
     const basePrice = Number(row.base_price ?? 0)
     const categoryName = (categoryNameById.get(row.category_id) ?? "SHOP").toUpperCase()
+    const isAccessory = row.slug.startsWith("acc-")
+    const normalizedSizes = isAccessory ? ["ONE SIZE"] : (sizesByProductId.get(row.id) ?? [])
     return {
       id: row.slug,
       name: row.name,
@@ -177,6 +226,7 @@ export const loadShopProductsPage = async (
         KR: categoryName,
       },
       tags: tagNamesByProductId.get(row.id) ?? [],
+      sizes: normalizedSizes,
     }
   })
 

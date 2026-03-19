@@ -5,6 +5,7 @@ import { getProductsBySlugs } from "@/features/products/services/get-products-by
 import { loadShopProductsPage } from "@/features/products/services/load-shop-products-page";
 import { getProductsByIdsQueryBuilder } from "@/features/products/query-builder/get-products-by-ids.builder";
 import { getProductsBySlugsQueryBuilder } from "@/features/products/query-builder/get-products-by-slugs.builder";
+import { getProductTagRelationsByProductIdsQueryBuilder } from "@/features/products/query-builder/get-product-tag-relations-by-product-ids.builder";
 import { getProductTagRelationsByTagIdsQueryBuilder } from "@/features/products/query-builder/get-product-tag-relations-by-tag-ids.builder";
 import { getProductTagsBySlugsQueryBuilder } from "@/features/products/query-builder/get-product-tags-by-slugs.builder";
 import { listProductImagesForEmbeddingQueryBuilder } from "@/features/products/query-builder/list-product-images-for-embedding.builder";
@@ -442,6 +443,108 @@ export const findStyleByImage = async (
     detectedTags: analysis.styleTags,
     products,
   };
+};
+
+export const recommendSimilarProductsByTags = async (
+  supabaseClient: SupabaseClient<Database>,
+  input: RecommendSimilarByAiInput,
+): Promise<ShopProductItem[]> => {
+  const limit = Math.max(1, Math.min(12, input.limit ?? 5));
+  const sourceProductDbId = await getProductDbIdBySlug(
+    supabaseClient,
+    input.productId,
+  );
+  if (!sourceProductDbId) {
+    return [];
+  }
+
+  const { data: sourceTagRowsData, error: sourceTagRowsError } =
+    await getProductTagRelationsByProductIdsQueryBuilder(supabaseClient, [
+      sourceProductDbId,
+    ]);
+  if (sourceTagRowsError) {
+    throw new Error(
+      `Failed to load source product tags: ${sourceTagRowsError.message}`,
+    );
+  }
+
+  const sourceTagRows = (sourceTagRowsData ?? []) as Array<{
+    product_id: string;
+    tag_id: string;
+  }>;
+  const sourceTagIds = [...new Set(sourceTagRows.map((row) => row.tag_id))];
+  if (sourceTagIds.length === 0) {
+    return [];
+  }
+
+  const { data: relationRowsData, error: relationRowsError } =
+    await getProductTagRelationsByTagIdsQueryBuilder(supabaseClient, sourceTagIds);
+  if (relationRowsError) {
+    throw new Error(
+      `Failed to load related product tags: ${relationRowsError.message}`,
+    );
+  }
+
+  const relationRows = (relationRowsData ?? []) as Array<{
+    product_id: string;
+    tag_id: string;
+  }>;
+  const matchedTagIdsByProductId = new Map<string, Set<string>>();
+  relationRows.forEach((row) => {
+    if (row.product_id === sourceProductDbId) return;
+    const set = matchedTagIdsByProductId.get(row.product_id) ?? new Set<string>();
+    set.add(row.tag_id);
+    matchedTagIdsByProductId.set(row.product_id, set);
+  });
+
+  const ranked = [...matchedTagIdsByProductId.entries()]
+    .map(([productId, matchedTagIds]) => {
+      const ratio = matchedTagIds.size / sourceTagIds.length;
+      return {
+        product_id: productId,
+        similarity: Math.max(0, Math.min(100, Math.round(ratio * 100))),
+      };
+    })
+    .filter((row) => row.similarity > 0)
+    .sort((a, b) => b.similarity - a.similarity);
+
+  if (ranked.length === 0) {
+    return [];
+  }
+
+  const candidateIds = ranked.slice(0, limit).map((row) => row.product_id);
+  const { data: candidateRowsData, error: candidateRowsError } =
+    await getProductsByIdsQueryBuilder(supabaseClient, candidateIds);
+  if (candidateRowsError) {
+    throw new Error(
+      `Failed to load similar products: ${candidateRowsError.message}`,
+    );
+  }
+
+  const candidateRows = (candidateRowsData ?? []) as Array<{
+    id: string;
+    slug: string;
+  }>;
+  const slugById = new Map(candidateRows.map((row) => [row.id, row.slug]));
+  const orderedSlugs = candidateIds
+    .map((id) => slugById.get(id))
+    .filter((slug): slug is string => !!slug);
+
+  const products = await getProductsBySlugs(supabaseClient, orderedSlugs);
+  const similarityBySlug = new Map(
+    ranked
+      .map((row) => {
+        const slug = slugById.get(row.product_id);
+        if (!slug) return null;
+        return [slug, row.similarity] as const;
+      })
+      .filter((entry): entry is readonly [string, number] => !!entry),
+  );
+
+  return products.map((product) => ({
+    ...product,
+    aiMatch: similarityBySlug.get(product.id) ?? 0,
+  }));
 };
 
 export const recommendSimilarProductsByAi = async (

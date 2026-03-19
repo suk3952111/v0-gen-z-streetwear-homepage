@@ -19,8 +19,6 @@ interface ProductDetailProps {
   initialProduct: ShopProductItem | null
 }
 
-const sizes = ["XS", "S", "M", "L", "XL", "XXL"]
-
 const descriptions: Record<string, { EN: string; KR: string }> = {
   HOODIES: {
     EN: "Premium heavyweight cotton blend hoodie with oversized fit. Cyber-inspired design with reflective details.",
@@ -71,6 +69,12 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
   const [similarProducts, setSimilarProducts] = useState<ShopProductItem[]>([])
 
   const product = initialProduct
+  const availableSizes = useMemo(() => {
+    if (!product) return []
+    if (product.id.startsWith("acc-")) return ["ONE SIZE"]
+    if (product.sizes.length === 0) return ["ONE SIZE"]
+    return product.sizes
+  }, [product])
 
   const galleryImages = useMemo(() => {
     if (!product) return []
@@ -105,6 +109,14 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
       cancelled = true
     }
   }, [product])
+
+  useEffect(() => {
+    if (availableSizes.length === 0) return
+    if (!selectedSize || !availableSizes.includes(selectedSize)) {
+      setSelectedSize(availableSizes[0] ?? null)
+      setSizeError(false)
+    }
+  }, [availableSizes, selectedSize])
 
   const formatPrice = (p: number, curr: string) => {
     if (curr === "KRW") return `${p.toLocaleString()}원`
@@ -222,7 +234,7 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
                 <button className="text-[#CCFF00] text-sm font-bold uppercase tracking-wider hover:text-white transition-colors underline underline-offset-4">{t("sizeGuide")}</button>
               </div>
               <div className="flex flex-wrap gap-3">
-                {sizes.map((size) => (
+                {availableSizes.map((size) => (
                   <button key={size} onClick={() => { setSelectedSize(size); setSizeError(false) }} className={`w-14 h-14 flex items-center justify-center font-bold text-lg uppercase border-4 transition-all ${selectedSize === size ? "bg-[#CCFF00] text-[#0a0a0a] border-[#CCFF00]" : "bg-[#0a0a0a] text-white border-[#CCFF00] hover:bg-[#1a1a1a]"}`}>{size}</button>
                 ))}
               </div>

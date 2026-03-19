@@ -14,6 +14,7 @@ export async function loadShopInitialAction(): Promise<LoadShopInitialActionStat
       success: false,
       data: {
         categories: [{ value: "all", label: "ALL" }],
+        brands: [{ value: "all", label: "ALL BRANDS" }],
         tags: [],
         page: { items: [], hasMore: false, nextOffset: 0 },
       },

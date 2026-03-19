@@ -32,6 +32,7 @@ export function ShopView({ initialData }: ShopViewProps) {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeCategory, setActiveCategory] = useState("all")
+  const [activeBrand, setActiveBrand] = useState("all")
   const [activeTags, setActiveTags] = useState<string[]>([])
   const [products, setProducts] = useState<ShopProductItem[]>(initialData.page.items)
   const [nextOffset, setNextOffset] = useState(initialData.page.nextOffset)
@@ -54,11 +55,12 @@ export function ShopView({ initialData }: ShopViewProps) {
   const clearFilters = () => {
     setSearchQuery("")
     setActiveCategory("all")
+    setActiveBrand("all")
     setActiveTags([])
   }
 
   const sortedTags = useMemo(() => [...activeTags].sort(), [activeTags])
-  const filterKey = `${debouncedSearchQuery}|${activeCategory}|${sortedTags.join(",")}`
+  const filterKey = `${debouncedSearchQuery}|${activeCategory}|${activeBrand}|${sortedTags.join(",")}`
 
   useEffect(() => {
     if (skipFirstRefreshRef.current) {
@@ -72,6 +74,7 @@ export function ShopView({ initialData }: ShopViewProps) {
         const result = await loadShopProductsAction({
         searchQuery: debouncedSearchQuery,
         categorySlug: activeCategory,
+        brandSlug: activeBrand,
         tagSlugs: sortedTags,
         offset: 0,
         limit: 16,
@@ -87,7 +90,7 @@ export function ShopView({ initialData }: ShopViewProps) {
     return () => {
       cancelled = true
     }
-  }, [filterKey, debouncedSearchQuery, activeCategory, sortedTags])
+  }, [filterKey, debouncedSearchQuery, activeCategory, activeBrand, sortedTags])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -105,6 +108,7 @@ export function ShopView({ initialData }: ShopViewProps) {
           const result = await loadShopProductsAction({
             searchQuery: debouncedSearchQuery,
             categorySlug: activeCategory,
+            brandSlug: activeBrand,
             tagSlugs: sortedTags,
             offset: nextOffset,
             limit: 16,
@@ -127,9 +131,9 @@ export function ShopView({ initialData }: ShopViewProps) {
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [activeCategory, hasMore, isRefreshing, nextOffset, sortedTags, debouncedSearchQuery])
+  }, [activeCategory, activeBrand, hasMore, isRefreshing, nextOffset, sortedTags, debouncedSearchQuery])
 
-  const hasActiveFilters = searchQuery || activeCategory !== "all" || activeTags.length > 0
+  const hasActiveFilters = searchQuery || activeCategory !== "all" || activeBrand !== "all" || activeTags.length > 0
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
@@ -148,9 +152,12 @@ export function ShopView({ initialData }: ShopViewProps) {
           onSearchChange={setSearchQuery}
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
+          activeBrand={activeBrand}
+          onBrandChange={setActiveBrand}
           activeTags={activeTags}
           onToggleTag={toggleTag}
           categories={initialData.categories}
+          brands={initialData.brands}
           tags={initialData.tags}
           content={{
             title: t("title"),

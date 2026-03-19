@@ -11,6 +11,7 @@ export const loadShopInitialData = async (
     loadShopFilters(supabaseClient),
     loadShopProductsPage(supabaseClient, {
       categorySlug: "all",
+      brandSlug: "all",
       tagSlugs: [],
       searchQuery: "",
       offset: 0,
@@ -20,6 +21,7 @@ export const loadShopInitialData = async (
 
   return {
     categories: filters.categories,
+    brands: filters.brands,
     tags: filters.tags,
     page,
   }
