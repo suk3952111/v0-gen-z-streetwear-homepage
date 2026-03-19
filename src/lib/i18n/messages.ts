@@ -1,4 +1,6 @@
 import type { MessageNode } from "./types"
+import { aboutEnMessages } from "@/features/about/messages/en"
+import { aboutKrMessages } from "@/features/about/messages/kr"
 import { layoutEnMessages } from "@/components/layout/messages/en"
 import { layoutKrMessages } from "@/components/layout/messages/kr"
 import { adminEnMessages } from "@/features/admin/messages/en"
@@ -14,6 +16,7 @@ import { wishlistKrMessages } from "@/features/wishlist/messages/kr"
 
 export const messages: Record<"EN" | "KR", MessageNode> = {
   EN: {
+    about: aboutEnMessages,
     layout: layoutEnMessages,
     admin: adminEnMessages,
     cart: cartEnMessages,
@@ -22,6 +25,7 @@ export const messages: Record<"EN" | "KR", MessageNode> = {
     wishlist: wishlistEnMessages,
   },
   KR: {
+    about: aboutKrMessages,
     layout: layoutKrMessages,
     admin: adminKrMessages,
     cart: cartKrMessages,
