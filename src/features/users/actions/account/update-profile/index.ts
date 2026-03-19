@@ -36,9 +36,10 @@ export async function updateAccountProfileAction(
       .update({
         full_name: parsed.data.full_name.trim(),
         phone: parsed.data.phone.trim() || null,
+        avatar_url: parsed.data.avatar_url.trim() || null,
       })
       .eq("id", user.id)
-      .select("id, email, full_name, phone, created_at")
+      .select("id, email, full_name, avatar_url, phone, created_at")
       .single()
 
     if (error) {
@@ -51,6 +52,7 @@ export async function updateAccountProfileAction(
         id: data.id,
         email: data.email,
         full_name: data.full_name,
+        avatar_url: data.avatar_url,
         phone: data.phone,
         created_at: data.created_at,
       },

@@ -16,6 +16,7 @@ interface HeaderProps {
   currentUser?: {
     id: string
     fullName: string | null
+    avatarUrl: string | null
     role: string | null
   } | null
 }
@@ -36,12 +37,12 @@ export function Header({ onAuthClick, currentUser }: HeaderProps) {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b-4 border-[#CCFF00] bg-[#0a0a0a]">
-      <div className="flex items-center justify-between px-4 py-4 md:px-8">
-        <Link href="/" className="text-3xl md:text-4xl font-bold text-[#CCFF00] tracking-tighter hover:text-white transition-colors">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 py-4 md:px-8">
+        <Link href="/" className="justify-self-start text-3xl md:text-4xl font-bold text-[#CCFF00] tracking-tighter hover:text-white transition-colors">
           {t("brand")}
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center justify-center gap-8">
           <Link href="/shop" className="text-white text-lg font-bold uppercase tracking-wider hover:text-[#CCFF00] transition-colors border-b-2 border-transparent hover:border-[#CCFF00]">
             {t("nav.drops")}
           </Link>
@@ -53,7 +54,7 @@ export function Header({ onAuthClick, currentUser }: HeaderProps) {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="justify-self-end flex items-center gap-3">
           <div className="flex border-2 border-[#CCFF00]">
             <button
               onClick={() => setLocale("EN")}
@@ -86,11 +87,30 @@ export function Header({ onAuthClick, currentUser }: HeaderProps) {
                 className="flex items-center gap-2 p-2 border-2 border-[#CCFF00] bg-[#0a0a0a] text-[#CCFF00] transition-all hover:bg-[#CCFF00] hover:text-[#0a0a0a] hover:shadow-[0_0_15px_#CCFF00]"
                 aria-label={t("aria.auth")}
               >
-                <User className="w-6 h-6" />
+                <span className="relative w-6 h-6 overflow-hidden rounded-full border border-current">
+                  {currentUser.avatarUrl ? (
+                    <img
+                      src={currentUser.avatarUrl}
+                      alt={currentUser.fullName ?? "User"}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-6 h-6" />
+                  )}
+                </span>
                 <span className="hidden md:inline text-xs font-bold uppercase max-w-[90px] truncate">
                   {currentUser.fullName ?? "Account"}
                 </span>
               </Link>
+
+              {currentUser.role === "platform_admin" && (
+                <Link
+                  href="/admin"
+                  className="hidden md:inline-flex items-center px-3 py-2 border-2 border-[#CCFF00] bg-[#0a0a0a] text-[#CCFF00] text-xs font-bold uppercase tracking-wider transition-all hover:bg-[#CCFF00] hover:text-[#0a0a0a]"
+                >
+                  ADMIN
+                </Link>
+              )}
 
               <button
                 type="button"
@@ -157,6 +177,11 @@ export function Header({ onAuthClick, currentUser }: HeaderProps) {
           <Link href="/about" className="block px-4 py-4 text-white text-xl font-bold uppercase hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
             {t("nav.about")}
           </Link>
+          {currentUser?.role === "platform_admin" && (
+            <Link href="/admin" className="block px-4 py-4 text-white text-xl font-bold uppercase border-t-2 border-[#1a1a1a] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors">
+              ADMIN
+            </Link>
+          )}
           {currentUser && (
             <button
               type="button"

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   CheckCircle,
   ChevronRight,
@@ -30,6 +30,7 @@ type Tab = "profile" | "addresses" | "orders"
 
 export function AccountView() {
   const { locale, t } = useI18n("users.account")
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<Tab>("profile")
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
@@ -44,6 +45,7 @@ export function AccountView() {
   const [profileForm, setProfileForm] = useState({
     full_name: "",
     phone: "",
+    avatar_url: "",
   })
   const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [isAddingAddress, setIsAddingAddress] = useState(false)
@@ -101,6 +103,7 @@ export function AccountView() {
       setProfileForm({
         full_name: result.data.profile.full_name ?? "",
         phone: result.data.profile.phone ?? "",
+        avatar_url: result.data.profile.avatar_url ?? "",
       })
       setAddresses(result.data.addresses)
       setOrders(result.data.orders)
@@ -146,6 +149,7 @@ export function AccountView() {
     const result = await updateAccountProfileAction({
       full_name: profileForm.full_name,
       phone: profileForm.phone,
+      avatar_url: profileForm.avatar_url,
     })
     setIsSavingProfile(false)
 
@@ -158,8 +162,10 @@ export function AccountView() {
     setProfileForm({
       full_name: result.data.full_name ?? "",
       phone: result.data.phone ?? "",
+      avatar_url: result.data.avatar_url ?? "",
     })
     setIsEditingProfile(false)
+    router.refresh()
   }
 
   const handleSetDefaultAddress = async (id: string) => {
@@ -266,8 +272,18 @@ export function AccountView() {
             <div className="lg:col-span-1">
               <div className="border-4 border-[#CCFF00] bg-[#0a0a0a] sticky top-24">
                 <div className="p-6 border-b-4 border-[#CCFF00] text-center">
-                  <div className="w-24 h-24 mx-auto mb-4 border-4 border-[#CCFF00] bg-[#1a1a1a] flex items-center justify-center">
-                    <User className="w-12 h-12 text-[#CCFF00]" />
+                  <div className="w-24 h-24 mx-auto mb-4 border-4 border-[#CCFF00] bg-[#1a1a1a] overflow-hidden">
+                    {profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt={profile?.full_name ?? "User"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center">
+                        <User className="w-12 h-12 text-[#CCFF00]" />
+                      </div>
+                    )}
                   </div>
                   <p className="text-white font-bold text-xl uppercase">{profile?.full_name ?? "USER"}</p>
                   <div className="flex items-center justify-center gap-2 mt-2">
@@ -352,6 +368,38 @@ export function AccountView() {
                             className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white focus:border-[#CCFF00] focus:outline-none"
                           />
                         </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-[#888888] text-sm uppercase tracking-wider mb-2">
+                            {locale === "KR" ? "프로필 이미지 URL" : "Profile Image URL"}
+                          </label>
+                          <input
+                            type="url"
+                            value={profileForm.avatar_url}
+                            onChange={(e) =>
+                              setProfileForm((prev) => ({ ...prev, avatar_url: e.target.value }))
+                            }
+                            placeholder="https://..."
+                            className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white focus:border-[#CCFF00] focus:outline-none"
+                          />
+                          <p className="mt-2 text-xs text-[#666666]">
+                            {locale === "KR"
+                              ? "http:// 또는 https:// 로 시작하는 이미지 주소를 입력하세요."
+                              : "Use an image URL starting with http:// or https://"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="w-24 h-24 border-2 border-[#333333] bg-[#1a1a1a] overflow-hidden">
+                        {profileForm.avatar_url.trim().length > 0 ? (
+                          <img
+                            src={profileForm.avatar_url}
+                            alt="Preview"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <User className="w-10 h-10 text-[#555555]" />
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-4">
                         <button
@@ -368,6 +416,7 @@ export function AccountView() {
                             setProfileForm({
                               full_name: profile?.full_name ?? "",
                               phone: profile?.phone ?? "",
+                              avatar_url: profile?.avatar_url ?? "",
                             })
                           }}
                           className="px-8 py-4 bg-transparent text-[#888888] font-bold uppercase tracking-wider border-4 border-[#333333] hover:border-[#888888] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -402,6 +451,7 @@ export function AccountView() {
                           setProfileForm({
                             full_name: profile?.full_name ?? "",
                             phone: profile?.phone ?? "",
+                            avatar_url: profile?.avatar_url ?? "",
                           })
                         }}
                         className="px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors"

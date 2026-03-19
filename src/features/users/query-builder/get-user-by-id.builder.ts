@@ -7,7 +7,7 @@ export const getUserByIdQueryBuilder = (
 ) => {
   const query = supabaseClient
     .from('users')
-    .select('id, email, full_name, role, is_active, created_at, updated_at, last_sign_in_at')
+    .select('id, email, full_name, avatar_url, role, is_active, created_at, updated_at, last_sign_in_at')
     .eq('id', id)
     .single()
 

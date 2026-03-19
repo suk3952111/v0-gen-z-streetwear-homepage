@@ -84,7 +84,7 @@ export async function loadAccountOverviewAction(): Promise<LoadAccountOverviewAc
       await Promise.all([
         supabase
           .from("users")
-          .select("id, email, full_name, phone, created_at")
+          .select("id, email, full_name, avatar_url, phone, created_at")
           .eq("id", user.id)
           .single(),
         supabase
@@ -128,6 +128,7 @@ export async function loadAccountOverviewAction(): Promise<LoadAccountOverviewAc
         id: profileRow.id,
         email: profileRow.email,
         full_name: profileRow.full_name,
+        avatar_url: profileRow.avatar_url,
         phone: profileRow.phone,
         created_at: profileRow.created_at,
       },

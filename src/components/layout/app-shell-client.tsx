@@ -9,6 +9,7 @@ import { createSupabaseClient } from "@/lib/supabase/client"
 type ShellUser = {
   id: string
   fullName: string | null
+  avatarUrl: string | null
   role: string | null
 } | null
 

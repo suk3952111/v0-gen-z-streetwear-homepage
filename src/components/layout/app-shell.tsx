@@ -5,6 +5,7 @@ import { createSupabaseServer } from "@/lib/supabase/server"
 type ShellUser = {
   id: string
   fullName: string | null
+  avatarUrl: string | null
   role: string | null
 } | null
 
@@ -20,6 +21,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       currentUser = {
         id: user.id,
         fullName: userData?.full_name ?? null,
+        avatarUrl: userData?.avatar_url ?? null,
         role: userData?.role ?? null,
       }
     }
