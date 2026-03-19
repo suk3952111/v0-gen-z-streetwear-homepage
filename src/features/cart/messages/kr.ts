@@ -17,4 +17,5 @@
   date: "날짜",
   items: "상품 목록",
   loginRequiredRedirect: "로그인 후 구매 가능합니다. 로그인 페이지로 이동합니다.",
+  addressRequiredRedirect: "배송지를 먼저 추가해 주세요. 마이페이지로 이동합니다.",
 } as const

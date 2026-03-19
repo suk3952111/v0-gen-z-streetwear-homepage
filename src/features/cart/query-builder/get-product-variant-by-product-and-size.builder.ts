@@ -6,11 +6,12 @@ export const getProductVariantByProductAndSizeQueryBuilder = (
   productId: string,
   size: string,
 ) => {
+  const normalizedSize = size.trim().toUpperCase()
   return supabaseClient
     .from("product_variants")
     .select("id, size")
     .eq("product_id", productId)
-    .eq("size", size)
+    .eq("size", normalizedSize)
     .eq("is_active", true)
     .maybeSingle()
 }

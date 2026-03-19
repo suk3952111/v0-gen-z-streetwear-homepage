@@ -97,6 +97,13 @@ export async function createCheckoutOrderAction(
       .maybeSingle()
 
     const defaultAddress = defaultAddressData as { id?: string } | null
+    if (!defaultAddress?.id) {
+      return {
+        success: false,
+        data: null,
+        errorMessage: "Address required",
+      }
+    }
 
     const shippingFee = 0
     const itemPayload = cartRows.map((row) => {
@@ -130,7 +137,7 @@ export async function createCheckoutOrderAction(
           payment_method: "card",
           payment_status: "pending",
           shipping_fee: shippingFee,
-          user_address_id: defaultAddress?.id ?? null,
+          user_address_id: defaultAddress.id,
         })
         .select("id, order_number")
         .maybeSingle()

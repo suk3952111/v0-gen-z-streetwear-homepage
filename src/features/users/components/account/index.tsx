@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import {
   CheckCircle,
   ChevronRight,
@@ -29,6 +30,7 @@ type Tab = "profile" | "addresses" | "orders"
 
 export function AccountView() {
   const { locale, t } = useI18n("users.account")
+  const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<Tab>("profile")
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -54,6 +56,28 @@ export function AccountView() {
     city: "",
     postal_code: "",
   })
+
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    const add = searchParams.get("add")
+
+    if (tab === "addresses") {
+      setActiveTab("addresses")
+      if (add === "1") {
+        setIsAddingAddress(true)
+      }
+      return
+    }
+
+    if (tab === "orders") {
+      setActiveTab("orders")
+      return
+    }
+
+    if (tab === "profile") {
+      setActiveTab("profile")
+    }
+  }, [searchParams])
 
   useEffect(() => {
     let cancelled = false

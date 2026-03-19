@@ -1,4 +1,4 @@
-import type { Database } from "@/types/database.types"
+﻿import type { Database } from "@/types/database.types"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { getCartItemByUserAndProductQueryBuilder } from "@/features/cart/query-builder/get-cart-item-by-user-and-product.builder"
 import { getProductBySlugQueryBuilder } from "@/features/cart/query-builder/get-product-by-slug.builder"
@@ -14,33 +14,38 @@ export const addCartItem = async (
   size?: string,
 ) => {
   const safeQuantity = Math.max(1, quantity)
+  const normalizedSize = (size ?? "").trim().toUpperCase()
 
   const { data: productRow, error: productError } = await getProductBySlugQueryBuilder(
     supabaseClient,
     productSlug,
   )
   if (productError) {
-    throw new Error(`Cart 상품 조회 실패: ${productError.message}`)
+    throw new Error(`Failed to fetch product for cart: ${productError.message}`)
   }
+
   const product = productRow as { id: string } | null
   if (!product?.id) {
-    throw new Error("Cart 상품을 찾을 수 없습니다")
+    throw new Error("Product not found")
   }
 
   let variantId: string | null = null
-  if (size) {
+  if (normalizedSize.length > 0) {
     const { data: variantRow, error: variantError } = await getProductVariantByProductAndSizeQueryBuilder(
       supabaseClient,
       product.id,
-      size,
+      normalizedSize,
     )
+
     if (variantError) {
-      throw new Error(`Cart 사이즈 조회 실패: ${variantError.message}`)
+      throw new Error(`Failed to fetch product variant: ${variantError.message}`)
     }
+
     const variant = variantRow as { id: string } | null
-    if (!variant?.id && size !== "ONE SIZE") {
-      throw new Error("선택한 사이즈를 찾을 수 없습니다")
+    if (!variant?.id && normalizedSize !== "ONE SIZE") {
+      throw new Error("Selected size is unavailable")
     }
+
     variantId = variant?.id ?? null
   }
 
@@ -51,7 +56,7 @@ export const addCartItem = async (
     variantId,
   )
   if (existingError) {
-    throw new Error(`Cart 기존 항목 조회 실패: ${existingError.message}`)
+    throw new Error(`Failed to fetch existing cart item: ${existingError.message}`)
   }
 
   const existing = existingRow as { id: string; quantity: number } | null
@@ -64,7 +69,7 @@ export const addCartItem = async (
       nextQuantity,
     )
     if (updateError) {
-      throw new Error(`Cart 수량 업데이트 실패: ${updateError.message}`)
+      throw new Error(`Failed to update cart quantity: ${updateError.message}`)
     }
     return
   }
@@ -77,6 +82,6 @@ export const addCartItem = async (
     safeQuantity,
   )
   if (insertError) {
-    throw new Error(`Cart 항목 추가 실패: ${insertError.message}`)
+    throw new Error(`Failed to insert cart item: ${insertError.message}`)
   }
 }

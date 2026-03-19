@@ -17,4 +17,5 @@ export const cartEnMessages = {
   date: "DATE",
   items: "ITEMS",
   loginRequiredRedirect: "Please log in to purchase. Redirecting to the login page.",
+  addressRequiredRedirect: "Please add a shipping address first. Redirecting to My Page.",
 } as const

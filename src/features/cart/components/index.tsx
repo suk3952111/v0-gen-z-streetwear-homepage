@@ -132,6 +132,13 @@ export function CartView() {
         }, 500)
         return
       }
+      if (errorMessage === "Address required") {
+        setCheckoutError(t("addressRequiredRedirect"))
+        setTimeout(() => {
+          router.push(`${APP_URLS.account}?tab=addresses&add=1`)
+        }, 500)
+        return
+      }
       setCheckoutError(errorMessage)
       return
     }
