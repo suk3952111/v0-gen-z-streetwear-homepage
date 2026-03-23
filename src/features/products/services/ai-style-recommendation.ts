@@ -47,6 +47,8 @@ type GeminiEmbeddingResponse = {
 type ImageStyleAnalysis = {
   caption: string;
   styleTags: string[];
+  garmentType: string;
+  color: string;
 };
 
 const GEMINI_IMAGE_MODEL = "gemini-2.5-flash";
@@ -109,6 +111,228 @@ const normalizeTagSlug = (tag: string) => {
     .replace(/^#+/, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+};
+
+const tokenizeText = (value: string) => {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, " ")
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+};
+
+const buildAnalysisKeywords = (analysis: ImageStyleAnalysis) => {
+  return new Set(
+    [
+      analysis.color,
+      analysis.garmentType,
+      ...analysis.styleTags,
+      ...tokenizeText(analysis.caption),
+    ]
+      .flatMap((value) => tokenizeText(value))
+      .filter(Boolean),
+  );
+};
+
+const getCategoryTokens = (product: ShopProductItem) => {
+  return new Set([
+    ...tokenizeText(product.category.EN),
+    ...tokenizeText(product.category.KR),
+  ]);
+};
+
+const isAccessoryLike = (product: ShopProductItem) => {
+  const tokens = getCategoryTokens(product);
+  return ["acc", "accessory", "bag", "cap", "hat", "shoe", "shoes", "sneakers"].some(
+    (token) => tokens.has(token),
+  );
+};
+
+const isTopLike = (product: ShopProductItem) => {
+  const tokens = new Set([
+    ...getCategoryTokens(product),
+    ...tokenizeText(product.name),
+    ...product.tags.flatMap((tag) => tokenizeText(tag)),
+  ]);
+
+  return [
+    "top",
+    "tops",
+    "shirt",
+    "t",
+    "tee",
+    "crewneck",
+    "long",
+    "sleeve",
+    "jersey",
+  ].some((token) => tokens.has(token));
+};
+
+const getSpecificGarmentGroup = (value: string) => {
+  const tokens = tokenizeText(value);
+
+  if (tokens.includes("t") && tokens.includes("shirt")) return "tshirt";
+  if (tokens.includes("tee")) return "tshirt";
+  if (tokens.includes("tank") && tokens.includes("top")) return "tank";
+  if (tokens.includes("hoodie")) return "hoodie";
+  if (tokens.includes("jacket")) return "jacket";
+  if (tokens.includes("shirt")) return "shirt";
+  if (tokens.includes("jersey")) return "jersey";
+  if (tokens.includes("crewneck")) return "crewneck";
+  if (tokens.includes("top") || tokens.includes("tops")) return "top";
+
+  return null;
+};
+
+const inferProductGarmentTags = (product: ShopProductItem) => {
+  const text = [product.name, product.category.EN, product.category.KR, ...product.tags].join(
+    " ",
+  );
+  const tokens = tokenizeText(text);
+  const normalizedText = ` ${tokens.join(" ")} `;
+  const inferred = new Set<string>();
+
+  if (
+    normalizedText.includes(" t shirt ") ||
+    normalizedText.includes(" tee ") ||
+    normalizedText.includes(" graphic tee ")
+  ) {
+    inferred.add("tshirt");
+  }
+  if (normalizedText.includes(" shirt ") || normalizedText.includes(" button up ")) {
+    inferred.add("shirt");
+  }
+  if (normalizedText.includes(" tank top ") || normalizedText.includes(" tank ")) {
+    inferred.add("tank");
+  }
+  if (normalizedText.includes(" hoodie ") || normalizedText.includes(" hoodies ")) {
+    inferred.add("hoodie");
+  }
+  if (
+    normalizedText.includes(" jacket ") ||
+    normalizedText.includes(" bomber ") ||
+    normalizedText.includes(" windbreaker ") ||
+    normalizedText.includes(" parka ") ||
+    normalizedText.includes(" coat ")
+  ) {
+    inferred.add("jacket");
+  }
+  if (normalizedText.includes(" jersey ")) {
+    inferred.add("jersey");
+  }
+  if (normalizedText.includes(" crewneck ")) {
+    inferred.add("crewneck");
+  }
+  if (
+    normalizedText.includes(" pants ") ||
+    normalizedText.includes(" jogger ") ||
+    normalizedText.includes(" trousers ") ||
+    normalizedText.includes(" shorts ") ||
+    normalizedText.includes(" denim ")
+  ) {
+    inferred.add("pants");
+  }
+  if (
+    normalizedText.includes(" bag ") ||
+    normalizedText.includes(" backpack ") ||
+    normalizedText.includes(" cap ") ||
+    normalizedText.includes(" hat ") ||
+    normalizedText.includes(" key holder ")
+  ) {
+    inferred.add("accessory");
+  }
+  if (
+    normalizedText.includes(" shoes ") ||
+    normalizedText.includes(" sneakers ") ||
+    normalizedText.includes(" sneaker ")
+  ) {
+    inferred.add("shoes");
+  }
+
+  const fallbackGroup = getSpecificGarmentGroup(text);
+  if (fallbackGroup) {
+    inferred.add(fallbackGroup);
+  }
+
+  return inferred;
+};
+
+const scoreProductByAnalysis = (
+  product: ShopProductItem,
+  analysis: ImageStyleAnalysis,
+) => {
+  const inferredGarmentTags = inferProductGarmentTags(product);
+  const productTokens = new Set([
+    ...tokenizeText(product.name),
+    ...tokenizeText(product.category.EN),
+    ...tokenizeText(product.category.KR),
+    ...product.tags.flatMap((tag) => tokenizeText(tag)),
+    ...[...inferredGarmentTags].flatMap((tag) => tokenizeText(tag)),
+  ]);
+
+  const colorTokens = tokenizeText(analysis.color);
+  const garmentTokens = tokenizeText(analysis.garmentType);
+  const analysisKeywords = buildAnalysisKeywords(analysis);
+  const analysisGroup =
+    getSpecificGarmentGroup(analysis.garmentType) ??
+    getSpecificGarmentGroup(analysis.caption) ??
+    getSpecificGarmentGroup(analysis.styleTags.join(" "));
+  const productGroup =
+    getSpecificGarmentGroup(product.name) ??
+    getSpecificGarmentGroup(product.category.EN) ??
+    getSpecificGarmentGroup(product.tags.join(" "));
+  const isGarmentTopLike = [
+    "shirt",
+    "t-shirt",
+    "tee",
+    "top",
+    "long",
+    "sleeve",
+    "crewneck",
+    "jersey",
+  ].some((token) => garmentTokens.includes(token));
+
+  let score = 0;
+
+  if (colorTokens.some((token) => productTokens.has(token))) {
+    score += 0.28;
+  }
+
+  if (garmentTokens.some((token) => productTokens.has(token))) {
+    score += 0.55;
+  }
+
+  if (analysisGroup && inferredGarmentTags.has(analysisGroup)) {
+    score += 0.32;
+  }
+
+  const matchedKeywordCount = [...analysisKeywords].filter((token) =>
+    productTokens.has(token),
+  ).length;
+  score += Math.min(0.25, matchedKeywordCount * 0.04);
+
+  if (isGarmentTopLike) {
+    if (isAccessoryLike(product)) {
+      score -= 0.55;
+    } else if (analysisGroup && productGroup && analysisGroup === productGroup) {
+      score += 0.28;
+    } else if (
+      analysisGroup &&
+      productGroup &&
+      analysisGroup !== productGroup &&
+      ["tshirt", "shirt", "tank", "hoodie", "jacket", "jersey"].includes(analysisGroup) &&
+      ["tshirt", "shirt", "tank", "hoodie", "jacket", "jersey"].includes(productGroup)
+    ) {
+      score -= 0.24;
+    } else if (isTopLike(product)) {
+      score += 0.22;
+    } else {
+      score -= 0.18;
+    }
+  }
+
+  return score;
 };
 
 const callGeminiGenerate = async (parts: Array<Record<string, unknown>>) => {
@@ -182,7 +406,7 @@ const analyzeImageStyle = async (
   const image = parseDataUrl(imageDataUrl);
   const content = await callGeminiGenerate([
     {
-      text: 'Analyze this fashion image and return JSON: {"caption":"short caption","style_tags":["tag1","tag2","tag3"]}. The caption must briefly describe the clothing item, color, and type. style_tags must be short lowercase words, max 8.',
+      text: 'Analyze this fashion image and return JSON: {"caption":"short caption","color":"main color","garment_type":"specific clothing type","style_tags":["tag1","tag2","tag3"]}. The caption must briefly describe the clothing item, color, and type. color should be a short lowercase color word. garment_type should be a short lowercase clothing type like shirt, jacket, hoodie, pants, sneakers, bag. style_tags must be short lowercase words, max 8.',
     },
     {
       inline_data: {
@@ -192,7 +416,12 @@ const analyzeImageStyle = async (
     },
   ]);
 
-  const parsed = parseJsonSafe<{ caption?: string; style_tags?: string[] }>(
+  const parsed = parseJsonSafe<{
+    caption?: string;
+    style_tags?: string[];
+    garment_type?: string;
+    color?: string;
+  }>(
     extractJsonObject(content),
     {},
   );
@@ -201,6 +430,8 @@ const analyzeImageStyle = async (
     .map((tag) => tag.trim().toLowerCase())
     .filter((tag) => tag.length > 0)
     .slice(0, 8);
+  const garmentType = (parsed.garment_type ?? "").trim().toLowerCase();
+  const color = (parsed.color ?? "").trim().toLowerCase();
   const fallbackCaption = [
     styleTags.slice(0, 3).join(" "),
     "clothing item",
@@ -211,6 +442,8 @@ const analyzeImageStyle = async (
   return {
     caption: caption || fallbackCaption,
     styleTags,
+    garmentType,
+    color,
   };
 };
 
@@ -269,6 +502,7 @@ const mapMatchedProductsToItems = async (
   supabaseClient: SupabaseClient<Database>,
   rows: Array<{ product_id: string; similarity: number }>,
   limit: number,
+  analysis?: ImageStyleAnalysis,
 ) => {
   if (rows.length === 0) return [] as ShopProductItem[];
 
@@ -301,10 +535,25 @@ const mapMatchedProductsToItems = async (
       .filter((entry): entry is readonly [string, number] => !!entry),
   );
 
-  return products.slice(0, limit).map((product) => ({
-    ...product,
-    aiMatch: scoreBySlug.get(product.id) ?? product.aiMatch,
-  }));
+  const rankedProducts = products
+    .map((product) => {
+      const embeddingScore = scoreBySlug.get(product.id) ?? product.aiMatch;
+      const analysisBoost = analysis
+        ? scoreProductByAnalysis(product, analysis)
+        : 0;
+      const finalScore = Math.max(
+        0,
+        Math.min(100, Math.round(embeddingScore * (1 - analysisBoost) + 100 * analysisBoost)),
+      );
+
+      return {
+        ...product,
+        aiMatch: finalScore,
+      };
+    })
+    .sort((a, b) => b.aiMatch - a.aiMatch);
+
+  return rankedProducts.slice(0, limit);
 };
 
 const getProductDbIdBySlug = async (
@@ -463,6 +712,7 @@ export const findStyleByImage = async (
     supabaseClient,
     rankedRows,
     limit,
+    analysis,
   );
   return {
     detectedTags: analysis.styleTags,
