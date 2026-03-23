@@ -286,7 +286,10 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
           </div>
         </div>
         <div className="overflow-x-auto scrollbar-hide">
-          <div className="flex gap-6 px-4 md:px-8 pb-4" style={{ width: "max-content" }}>
+          <div
+            className="flex min-w-full justify-start gap-6 px-4 pb-4 md:justify-center md:px-8"
+            style={{ width: "max-content" }}
+          >
             {similarProducts.map((sp) => (
               <Link key={sp.id} href={`/product/${sp.id}`} className="relative w-64 sm:w-72 flex-shrink-0 border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00] group cursor-pointer block">
                 <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]" style={{ animation: "badge-glow 2s ease-in-out infinite" }}>
