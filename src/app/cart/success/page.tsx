@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { revalidatePath } from "next/cache"
 import { APP_URLS } from "@/constants/url"
 import { NoiseOverlay } from "@/components/ui"
 import { createSupabaseAdmin } from "@/lib/supabase/admin"
@@ -220,9 +219,6 @@ async function confirmTossPayment(searchParams: Awaited<SuccessPageProps["search
     }
 
     await supabase.from("cart_items").delete().eq("user_id", order.user_id)
-
-    revalidatePath(APP_URLS.cart)
-    revalidatePath(APP_URLS.account)
 
     return {
       ok: true,
