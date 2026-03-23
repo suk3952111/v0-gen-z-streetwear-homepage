@@ -64,6 +64,25 @@ const parseJsonSafe = <T>(value: string, fallback: T): T => {
   }
 };
 
+const stripCodeFences = (value: string) => {
+  return value
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+};
+
+const extractJsonObject = (value: string) => {
+  const normalized = stripCodeFences(value);
+  const start = normalized.indexOf("{");
+  const end = normalized.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    return normalized.slice(start, end + 1);
+  }
+  return normalized;
+};
+
 const parseDataUrl = (value: string) => {
   const match = value.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
   if (!match) {
@@ -105,6 +124,7 @@ const callGeminiGenerate = async (parts: Array<Record<string, unknown>>) => {
     body: JSON.stringify({
       generationConfig: {
         temperature: 0.2,
+        responseMimeType: "application/json",
       },
       contents: [{ role: "user", parts }],
     }),
@@ -162,7 +182,7 @@ const analyzeImageStyle = async (
   const image = parseDataUrl(imageDataUrl);
   const content = await callGeminiGenerate([
     {
-      text: 'Analyze this fashion image and return strict JSON only: {"caption":"short caption","style_tags":["tag1","tag2","tag3"]}. style_tags must be short lowercase words, max 8.',
+      text: 'Analyze this fashion image and return JSON: {"caption":"short caption","style_tags":["tag1","tag2","tag3"]}. The caption must briefly describe the clothing item, color, and type. style_tags must be short lowercase words, max 8.',
     },
     {
       inline_data: {
@@ -173,7 +193,7 @@ const analyzeImageStyle = async (
   ]);
 
   const parsed = parseJsonSafe<{ caption?: string; style_tags?: string[] }>(
-    content,
+    extractJsonObject(content),
     {},
   );
   const caption = (parsed.caption ?? "").trim();
@@ -181,12 +201,17 @@ const analyzeImageStyle = async (
     .map((tag) => tag.trim().toLowerCase())
     .filter((tag) => tag.length > 0)
     .slice(0, 8);
+  const fallbackCaption = [
+    styleTags.slice(0, 3).join(" "),
+    "clothing item",
+  ]
+    .map((part) => part.trim())
+    .find((part) => part.length > 0) ?? "clothing item";
 
-  if (!caption) {
-    throw new Error("Failed to analyze image caption");
-  }
-
-  return { caption, styleTags };
+  return {
+    caption: caption || fallbackCaption,
+    styleTags,
+  };
 };
 
 const fetchImageAsDataUrl = async (imageUrl: string) => {
