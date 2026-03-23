@@ -18,4 +18,10 @@ export const cartEnMessages = {
   items: "ITEMS",
   loginRequiredRedirect: "Please log in to purchase. Redirecting to the login page.",
   addressRequiredRedirect: "Please add a shipping address first. Redirecting to My Page.",
+  paymentConfigMissing: "Toss Payments client key is missing.",
+  paymentSdkLoading: "Loading the payment module. Please try again shortly.",
+  paymentLaunchFailed: "Unable to open the payment window. Please try again.",
+  paymentPreparing: "PREPARING PAYMENT...",
+  loadingCart: "Loading cart...",
+  viewOrders: "VIEW ORDERS",
 } as const

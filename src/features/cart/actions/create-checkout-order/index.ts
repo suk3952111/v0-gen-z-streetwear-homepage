@@ -13,6 +13,19 @@ const makeOrderNumber = () => {
   return `VC-${y}${m}${d}-${rand}`
 }
 
+const makeOrderName = (itemNames: string[]) => {
+  if (itemNames.length === 0) {
+    return "VIBE CHECK ORDER"
+  }
+
+  const [firstName, ...rest] = itemNames
+  if (rest.length === 0) {
+    return firstName
+  }
+
+  return `${firstName} and ${rest.length} more`
+}
+
 export async function createCheckoutOrderAction(
   input: CreateCheckoutOrderInput,
 ): Promise<CreateCheckoutOrderActionState> {
@@ -40,6 +53,14 @@ export async function createCheckoutOrderAction(
       }
     }
 
+    const { data: profileData, error: profileError } = await supabase
+      .from("users")
+      .select("email, full_name")
+      .eq("id", user.id)
+      .maybeSingle()
+
+    if (profileError) throw new Error(profileError.message)
+
     const { data: cartRowsData, error: cartRowsError } = await supabase
       .from("cart_items")
       .select("id, product_id, variant_id, quantity")
@@ -53,6 +74,7 @@ export async function createCheckoutOrderAction(
       variant_id: string | null
       quantity: number
     }>
+
     if (cartRows.length === 0) {
       return {
         success: false,
@@ -64,13 +86,14 @@ export async function createCheckoutOrderAction(
     const productIds = [...new Set(cartRows.map((row) => row.product_id))]
     const { data: productRowsData, error: productRowsError } = await supabase
       .from("products")
-      .select("id, base_price, is_published, is_deleted")
+      .select("id, name, base_price, is_published, is_deleted")
       .in("id", productIds)
 
     if (productRowsError) throw new Error(productRowsError.message)
 
     const productRows = (productRowsData ?? []) as Array<{
       id: string
+      name: string
       base_price: number
       is_published: boolean
       is_deleted: boolean
@@ -78,9 +101,10 @@ export async function createCheckoutOrderAction(
     const productById = new Map(productRows.map((row) => [row.id, row]))
 
     const invalid = cartRows.find((row) => {
-      const p = productById.get(row.product_id)
-      return !p || !p.is_published || p.is_deleted
+      const product = productById.get(row.product_id)
+      return !product || !product.is_published || product.is_deleted
     })
+
     if (invalid) {
       return {
         success: false,
@@ -108,14 +132,15 @@ export async function createCheckoutOrderAction(
     const shippingFee = 0
     const itemPayload = cartRows.map((row) => {
       const product = productById.get(row.product_id)!
-      const unitPrice = Number(product.base_price ?? 0)
       return {
         product_id: row.product_id,
+        product_name: product.name,
         variant_id: row.variant_id,
         quantity: Math.max(1, Number(row.quantity ?? 1)),
-        unit_price: unitPrice,
+        unit_price: Number(product.base_price ?? 0),
       }
     })
+
     const totalAmount =
       itemPayload.reduce((acc, row) => acc + row.quantity * row.unit_price, 0) + shippingFee
 
@@ -134,7 +159,7 @@ export async function createCheckoutOrderAction(
           order_number: candidate,
           user_id: user.id,
           status: "pending",
-          payment_method: "card",
+          payment_method: "toss_payments",
           payment_status: "pending",
           shipping_fee: shippingFee,
           user_address_id: defaultAddress.id,
@@ -146,6 +171,7 @@ export async function createCheckoutOrderAction(
         createdOrder = { id: data.id, order_number: data.order_number }
         break
       }
+
       if (!error?.message?.toLowerCase().includes("duplicate")) {
         throw new Error(error?.message ?? "Failed to create order")
       }
@@ -156,7 +182,7 @@ export async function createCheckoutOrderAction(
     }
 
     const orderItems = itemPayload.map((row) => ({
-      order_id: createdOrder!.id,
+      order_id: createdOrder.id,
       product_id: row.product_id,
       variant_id: row.variant_id,
       quantity: row.quantity,
@@ -166,33 +192,16 @@ export async function createCheckoutOrderAction(
     const { error: itemInsertError } = await supabase.from("order_items").insert(orderItems)
     if (itemInsertError) throw new Error(itemInsertError.message)
 
-    // Payment/order status transition after order creation.
-    const { error: statusUpdateError } = await supabase
-      .from("orders")
-      .update({
-        payment_status: "completed",
-        status: "confirmed",
-        paid_at: new Date().toISOString(),
-      })
-      .eq("id", createdOrder.id)
-      .eq("user_id", user.id)
-
-    if (statusUpdateError) throw new Error(statusUpdateError.message)
-
-    const { error: cartDeleteError } = await supabase
-      .from("cart_items")
-      .delete()
-      .eq("user_id", user.id)
-    if (cartDeleteError) throw new Error(cartDeleteError.message)
-
     return {
       success: true,
       data: {
         orderId: createdOrder.id,
         orderNumber: createdOrder.order_number,
-        orderStatus: "confirmed",
-        paymentStatus: "completed",
+        orderName: makeOrderName(itemPayload.map((item) => item.product_name)),
         totalAmount,
+        customerKey: user.id,
+        customerEmail: profileData?.email ?? user.email ?? null,
+        customerName: profileData?.full_name ?? null,
       },
     }
   } catch (error) {

@@ -8,6 +8,8 @@ export const APP_URLS = {
   privacy: '/privacy',
   terms: '/terms',
   cart: '/cart',
+  cartSuccess: '/cart/success',
+  cartFail: '/cart/fail',
   wishlist: '/wishlist',
   account: '/account',
   login: '/login',

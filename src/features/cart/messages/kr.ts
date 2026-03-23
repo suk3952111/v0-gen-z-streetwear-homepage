@@ -18,4 +18,10 @@
   items: "상품 목록",
   loginRequiredRedirect: "로그인 후 구매 가능합니다. 로그인 페이지로 이동합니다.",
   addressRequiredRedirect: "배송지를 먼저 추가해 주세요. 마이페이지로 이동합니다.",
+  paymentConfigMissing: "토스페이먼트 테스트 키가 설정되지 않았습니다.",
+  paymentSdkLoading: "결제 모듈을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.",
+  paymentLaunchFailed: "결제창을 열지 못했습니다. 잠시 후 다시 시도해 주세요.",
+  paymentPreparing: "결제 준비 중...",
+  loadingCart: "장바구니를 불러오는 중...",
+  viewOrders: "주문 내역 보기",
 } as const

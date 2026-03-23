@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import Script from "next/script"
 import { useRouter } from "next/navigation"
 import { Minus, Plus, Sparkles, X } from "lucide-react"
 import { APP_URLS } from "@/constants/url"
@@ -27,15 +28,51 @@ type CartItemViewModel = {
   vibeTag: string
 }
 
+type TossPaymentRequest = {
+  amount: {
+    currency: "KRW"
+    value: number
+  }
+  card?: {
+    flowMode?: "DEFAULT" | "DIRECT"
+  }
+  customerEmail?: string
+  customerName?: string
+  failUrl: string
+  method: "CARD"
+  orderId: string
+  orderName: string
+  successUrl: string
+}
+
+type TossPaymentInstance = {
+  requestPayment: (request: TossPaymentRequest) => Promise<void>
+}
+
+declare global {
+  interface Window {
+    TossPayments?: (clientKey: string) => {
+      payment: (params: { customerKey: string }) => TossPaymentInstance
+    }
+  }
+}
+
 export function CartView() {
   const { locale, t } = useI18n("cart")
   const router = useRouter()
   const { entries, setQuantity, removeFromCart, isHydrating } = useCart()
   const [productById, setProductById] = useState<Record<string, ShopProductItem>>({})
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
+  const [isTossReady, setIsTossReady] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && typeof window.TossPayments === "function") {
+      setIsTossReady(true)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -48,6 +85,7 @@ export function CartView() {
             .filter((slug): slug is string => typeof slug === "string" && slug.trim().length > 0),
         ),
       ]
+
       if (slugs.length === 0) {
         if (!isHydrating) {
           setProductById({})
@@ -61,13 +99,14 @@ export function CartView() {
         const supabase = createSupabaseClient()
         const products = await getProductsBySlugs(supabase, slugs)
         if (cancelled) return
+
         const map: Record<string, ShopProductItem> = {}
         products.forEach((product) => {
           map[product.id] = product
         })
         setProductById(map)
       } catch {
-        // keep previous map on transient failures
+        // Keep the current UI state on transient product fetch failures.
       } finally {
         if (!cancelled) {
           setIsLoadingProducts(false)
@@ -86,7 +125,7 @@ export function CartView() {
       .map((entry) => {
         const product = productById[entry.productId]
         if (!product) return null
-        const vibeTag = product.tags[0]?.replace("#", "").toUpperCase() ?? "VIBE"
+
         return {
           id: entry.key,
           productId: entry.productId,
@@ -96,7 +135,7 @@ export function CartView() {
           size: entry.size,
           quantity: entry.quantity,
           image: product.image,
-          vibeTag,
+          vibeTag: product.tags[0]?.replace("#", "").toUpperCase() ?? "VIBE",
         }
       })
       .filter((item): item is CartItemViewModel => item !== null)
@@ -105,25 +144,32 @@ export function CartView() {
   const updateQuantity = async (id: string, delta: number) => {
     const current = entries.find((entry) => entry.key === id)
     if (!current) return
-    const nextQuantity = Math.max(1, current.quantity + delta)
-    await setQuantity(id, nextQuantity)
-  }
 
-  const removeItem = async (id: string) => {
-    await removeFromCart(id)
+    await setQuantity(id, Math.max(1, current.quantity + delta))
   }
 
   const handleCheckout = async () => {
     if (items.length === 0 || isCheckingOut) return
+
+    const tossClientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
+    if (!tossClientKey) {
+      setCheckoutError(t("paymentConfigMissing"))
+      return
+    }
+
+    if (typeof window.TossPayments !== "function") {
+      setCheckoutError(t("paymentSdkLoading"))
+      return
+    }
 
     setIsCheckingOut(true)
     setCheckoutError(null)
     setCheckoutMessage(null)
 
     const response = await createCheckoutOrderAction({})
-    setIsCheckingOut(false)
-
     if (!response.success || !response.data) {
+      setIsCheckingOut(false)
+
       const errorMessage = response.errorMessage ?? "Checkout failed"
       if (errorMessage === "Login required") {
         setCheckoutError(t("loginRequiredRedirect"))
@@ -132,6 +178,7 @@ export function CartView() {
         }, 500)
         return
       }
+
       if (errorMessage === "Address required") {
         setCheckoutError(t("addressRequiredRedirect"))
         setTimeout(() => {
@@ -139,23 +186,46 @@ export function CartView() {
         }, 500)
         return
       }
+
       setCheckoutError(errorMessage)
       return
     }
 
-    for (const entry of entries) {
-      await removeFromCart(entry.key)
-    }
+    try {
+      const payment = window.TossPayments(tossClientKey).payment({
+        customerKey: response.data.customerKey,
+      })
 
-    setCheckoutMessage(
-      locale === "KR"
-        ? `주문이 완료되었습니다. 주문번호: ${response.data.orderNumber}`
-        : `Checkout complete. Order #: ${response.data.orderNumber}`,
-    )
+      await payment.requestPayment({
+        method: "CARD",
+        amount: {
+          currency: "KRW",
+          value: Math.round(response.data.totalAmount),
+        },
+        orderId: response.data.orderNumber,
+        orderName: response.data.orderName,
+        customerEmail: response.data.customerEmail ?? undefined,
+        customerName: response.data.customerName ?? undefined,
+        successUrl: `${window.location.origin}${APP_URLS.cartSuccess}`,
+        failUrl: `${window.location.origin}${APP_URLS.cartFail}`,
+        card: {
+          flowMode: "DEFAULT",
+        },
+      })
+    } catch (error) {
+      const message = error instanceof Error && error.message
+        ? error.message
+        : t("paymentLaunchFailed")
+      setCheckoutError(message)
+      setIsCheckingOut(false)
+    }
   }
 
   const formatPrice = (usd: number, krw: number) => {
-    if (locale === "KR") return `${Math.round(krw).toLocaleString()}원`
+    if (locale === "KR") {
+      return `${Math.round(krw).toLocaleString()} KRW`
+    }
+
     return `$${Math.round(usd)}`
   }
 
@@ -164,7 +234,7 @@ export function CartView() {
     0,
   )
 
-  const orderNumber = "VC" + Math.random().toString(36).substring(2, 8).toUpperCase()
+  const orderNumber = `VC${Math.random().toString(36).substring(2, 8).toUpperCase()}`
   const currentDate = new Date().toLocaleDateString(locale === "KR" ? "ko-KR" : "en-US", {
     year: "numeric",
     month: "2-digit",
@@ -173,100 +243,99 @@ export function CartView() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
-      <section className="relative pt-24 pb-20 px-4 md:px-8">
+      <Script
+        src="https://js.tosspayments.com/v2/standard"
+        strategy="afterInteractive"
+        onLoad={() => setIsTossReady(true)}
+      />
+
+      <section className="relative px-4 pb-20 pt-24 md:px-8">
         <NoiseOverlay />
 
-        <div className="relative z-10 max-w-7xl mx-auto">
+        <div className="relative z-10 mx-auto max-w-7xl">
           <div className="mb-12 border-b-4 border-[#CCFF00] pb-6">
-            <h1 className="text-6xl md:text-8xl font-bold text-white tracking-tighter leading-none">
+            <h1 className="text-6xl font-bold leading-none tracking-tighter text-white md:text-8xl">
               {t("title")}
               <span className="text-[#CCFF00]">{t("titleAccent")}</span>
             </h1>
           </div>
 
           {checkoutMessage && (
-            <p className="mb-6 text-[#00FF88] text-sm uppercase tracking-wider">{checkoutMessage}</p>
+            <p className="mb-6 text-sm uppercase tracking-wider text-[#00FF88]">{checkoutMessage}</p>
           )}
           {checkoutError && (
-            <p className="mb-6 text-[#ff6666] text-sm uppercase tracking-wider">{checkoutError}</p>
+            <p className="mb-6 text-sm uppercase tracking-wider text-[#ff6666]">{checkoutError}</p>
           )}
 
-          {(isHydrating || isLoadingProducts) ? (
-            <div className="text-center py-20">
-              <p className="text-[#888888] text-2xl uppercase tracking-wider mb-8">
-                {locale === "KR" ? "장바구니 불러오는 중..." : "Loading cart..."}
-              </p>
+          {isHydrating || isLoadingProducts ? (
+            <div className="py-20 text-center">
+              <p className="mb-8 text-2xl uppercase tracking-wider text-[#888888]">{t("loadingCart")}</p>
             </div>
           ) : items.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-[#888888] text-2xl uppercase tracking-wider mb-8">{t("empty")}</p>
+            <div className="py-20 text-center">
+              <p className="mb-8 text-2xl uppercase tracking-wider text-[#888888]">{t("empty")}</p>
               <Link
-                href="/shop"
-                className="inline-block px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] text-xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors"
+                href={APP_URLS.shop}
+                className="inline-block border-4 border-[#CCFF00] bg-[#CCFF00] px-8 py-4 text-xl font-bold uppercase tracking-wider text-[#0a0a0a] transition-colors hover:bg-[#0a0a0a] hover:text-[#CCFF00]"
               >
                 {t("shopNow")}
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <div className="space-y-6 lg:col-span-2">
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-4 md:p-6 flex flex-col md:flex-row gap-6"
+                    className="flex flex-col gap-6 border-4 border-[#CCFF00] bg-[#0a0a0a] p-4 md:flex-row md:p-6"
                   >
-                    <div className="relative w-full md:w-40 h-40 border-2 border-[#CCFF00] flex-shrink-0">
-                      <Image
-                        src={item.image || "/placeholder.svg"}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                      />
-                      <span className="absolute top-2 left-2 px-2 py-1 bg-[#0a0a0a] border border-[#CCFF00] text-[#CCFF00] text-xs font-bold">
+                    <div className="relative h-40 w-full flex-shrink-0 border-2 border-[#CCFF00] md:w-40">
+                      <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
+                      <span className="absolute left-2 top-2 border border-[#CCFF00] bg-[#0a0a0a] px-2 py-1 text-xs font-bold text-[#CCFF00]">
                         {item.vibeTag}
                       </span>
                     </div>
 
-                    <div className="flex-1 flex flex-col justify-between">
+                    <div className="flex flex-1 flex-col justify-between">
                       <div>
-                        <h3 className="text-xl md:text-2xl font-bold text-white uppercase tracking-tight">
+                        <h3 className="text-xl font-bold uppercase tracking-tight text-white md:text-2xl">
                           {item.name}
                         </h3>
-                        <p className="text-[#888888] uppercase text-sm mt-1">SIZE: {item.size}</p>
+                        <p className="mt-1 text-sm uppercase text-[#888888]">SIZE: {item.size}</p>
                       </div>
 
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-4">
+                      <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-[#888888] text-sm uppercase mr-2">{t("quantity")}</span>
+                          <span className="mr-2 text-sm uppercase text-[#888888]">{t("quantity")}</span>
                           <button
                             onClick={() => void updateQuantity(item.id, -1)}
-                            className="w-10 h-10 border-2 border-[#CCFF00] text-[#CCFF00] flex items-center justify-center hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors"
+                            className="flex h-10 w-10 items-center justify-center border-2 border-[#CCFF00] text-[#CCFF00] transition-colors hover:bg-[#CCFF00] hover:text-[#0a0a0a]"
                             aria-label="Decrease quantity"
                           >
-                            <Minus className="w-4 h-4" />
+                            <Minus className="h-4 w-4" />
                           </button>
-                          <span className="w-12 h-10 border-2 border-[#CCFF00] text-white flex items-center justify-center font-bold">
+                          <span className="flex h-10 w-12 items-center justify-center border-2 border-[#CCFF00] font-bold text-white">
                             {item.quantity}
                           </span>
                           <button
                             onClick={() => void updateQuantity(item.id, 1)}
-                            className="w-10 h-10 border-2 border-[#CCFF00] text-[#CCFF00] flex items-center justify-center hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-colors"
+                            className="flex h-10 w-10 items-center justify-center border-2 border-[#CCFF00] text-[#CCFF00] transition-colors hover:bg-[#CCFF00] hover:text-[#0a0a0a]"
                             aria-label="Increase quantity"
                           >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="h-4 w-4" />
                           </button>
                         </div>
 
-                        <div className="flex items-center justify-between md:justify-end gap-6">
-                          <p className="text-[#CCFF00] text-2xl font-bold">
+                        <div className="flex items-center justify-between gap-6 md:justify-end">
+                          <p className="text-2xl font-bold text-[#CCFF00]">
                             {formatPrice(item.priceUSD * item.quantity, item.priceKRW * item.quantity)}
                           </p>
                           <button
-                            onClick={() => void removeItem(item.id)}
-                            className="flex items-center gap-2 text-[#888888] hover:text-[#ff4444] transition-colors uppercase text-sm"
+                            onClick={() => void removeFromCart(item.id)}
+                            className="flex items-center gap-2 text-sm uppercase text-[#888888] transition-colors hover:text-[#ff4444]"
                             aria-label="Remove item"
                           >
-                            <X className="w-5 h-5" />
+                            <X className="h-5 w-5" />
                             <span className="hidden md:inline">{t("remove")}</span>
                           </button>
                         </div>
@@ -276,19 +345,19 @@ export function CartView() {
                 ))}
 
                 <div className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Sparkles className="w-6 h-6 text-[#CCFF00]" />
-                    <h3 className="text-xl font-bold text-[#CCFF00] uppercase tracking-wider">{t("aiAnalyzer")}</h3>
+                  <div className="mb-6 flex items-center gap-3">
+                    <Sparkles className="h-6 w-6 text-[#CCFF00]" />
+                    <h3 className="text-xl font-bold uppercase tracking-wider text-[#CCFF00]">{t("aiAnalyzer")}</h3>
                   </div>
-                  <p className="text-[#888888] text-sm uppercase tracking-wider mb-4">{t("vibeScore")}</p>
+                  <p className="mb-4 text-sm uppercase tracking-wider text-[#888888]">{t("vibeScore")}</p>
                   <div className="space-y-4">
                     {vibeCategories.map((vibe) => (
                       <div key={vibe.name}>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-white font-bold uppercase text-sm">{vibe.name}</span>
-                          <span className="text-white font-bold">{vibe.percentage}%</span>
+                        <div className="mb-2 flex justify-between">
+                          <span className="text-sm font-bold uppercase text-white">{vibe.name}</span>
+                          <span className="font-bold text-white">{vibe.percentage}%</span>
                         </div>
-                        <div className="h-3 bg-[#1a1a1a] border border-[#333333]">
+                        <div className="h-3 border border-[#333333] bg-[#1a1a1a]">
                           <div
                             className="h-full transition-all duration-500"
                             style={{
@@ -305,13 +374,13 @@ export function CartView() {
               </div>
 
               <div className="lg:col-span-1">
-                <div className="border-4 border-[#CCFF00] bg-[#0a0a0a] sticky top-24">
+                <div className="sticky top-24 border-4 border-[#CCFF00] bg-[#0a0a0a]">
                   <div className="border-b-4 border-dashed border-[#CCFF00] p-6 text-center">
-                    <h2 className="text-3xl font-bold text-[#CCFF00] tracking-tighter">VIBE CHECK</h2>
-                    <p className="text-[#888888] text-xs uppercase tracking-[0.3em] mt-2">STREETWEAR RECEIPT</p>
+                    <h2 className="text-3xl font-bold tracking-tighter text-[#CCFF00]">VIBE CHECK</h2>
+                    <p className="mt-2 text-xs uppercase tracking-[0.3em] text-[#888888]">STREETWEAR RECEIPT</p>
                   </div>
 
-                  <div className="p-6 space-y-4 font-mono text-sm">
+                  <div className="space-y-4 p-6 font-mono text-sm">
                     <div className="flex justify-between text-[#888888]">
                       <span>{t("orderNumber")}</span>
                       <span className="text-white">{orderNumber}</span>
@@ -321,64 +390,58 @@ export function CartView() {
                       <span className="text-white">{currentDate}</span>
                     </div>
 
-                    <div className="border-t border-dashed border-[#333333] my-4" />
+                    <div className="my-4 border-t border-dashed border-[#333333]" />
 
                     <div className="space-y-2">
-                      <p className="text-[#888888] uppercase">{t("items")}</p>
+                      <p className="uppercase text-[#888888]">{t("items")}</p>
                       {items.map((item) => (
-                        <div key={item.id} className="flex justify-between text-white text-xs">
-                          <span className="truncate max-w-[60%]">
+                        <div key={item.id} className="flex justify-between text-xs text-white">
+                          <span className="max-w-[60%] truncate">
                             {item.quantity}x {item.name}
                           </span>
-                          <span>
-                            {formatPrice(item.priceUSD * item.quantity, item.priceKRW * item.quantity)}
-                          </span>
+                          <span>{formatPrice(item.priceUSD * item.quantity, item.priceKRW * item.quantity)}</span>
                         </div>
                       ))}
                     </div>
 
-                    <div className="border-t border-dashed border-[#333333] my-4" />
+                    <div className="my-4 border-t border-dashed border-[#333333]" />
 
                     <div className="flex justify-between text-[#888888]">
                       <span>{t("subtotal")}</span>
-                      <span className="text-white">
-                        {locale === "KR" ? `${Math.round(subtotal).toLocaleString()}원` : `$${Math.round(subtotal)}`}
-                      </span>
+                      <span className="text-white">{formatPrice(subtotal, subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-[#888888]">
                       <span>{t("shipping")}</span>
-                      <span className="text-white text-xs">{t("shippingValue")}</span>
+                      <span className="text-xs text-white">{t("shippingValue")}</span>
                     </div>
 
-                    <div className="border-t-4 border-[#CCFF00] my-4" />
+                    <div className="my-4 border-t-4 border-[#CCFF00]" />
 
                     <div className="flex justify-between text-xl font-bold">
                       <span className="text-white">{t("total")}</span>
-                      <span className="text-[#CCFF00]">
-                        {locale === "KR" ? `${Math.round(subtotal).toLocaleString()}원` : `$${Math.round(subtotal)}`}
-                      </span>
+                      <span className="text-[#CCFF00]">{formatPrice(subtotal, subtotal)}</span>
                     </div>
                   </div>
 
-                  <div className="p-6 pt-0 space-y-4">
+                  <div className="space-y-4 p-6 pt-0">
                     <button
                       onClick={() => void handleCheckout()}
-                      disabled={isCheckingOut || items.length === 0}
-                      className="w-full py-4 bg-[#CCFF00] text-[#0a0a0a] text-xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={isCheckingOut || items.length === 0 || !isTossReady}
+                      className="w-full border-4 border-[#CCFF00] bg-[#CCFF00] py-4 text-xl font-bold uppercase tracking-wider text-[#0a0a0a] transition-colors hover:bg-[#0a0a0a] hover:text-[#CCFF00] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {isCheckingOut ? "PROCESSING..." : t("checkout")}
+                      {isCheckingOut ? t("paymentPreparing") : t("checkout")}
                     </button>
                     <Link
-                      href="/shop"
-                      className="block text-center text-[#888888] text-sm uppercase tracking-wider hover:text-[#CCFF00] transition-colors"
+                      href={APP_URLS.shop}
+                      className="block text-center text-sm uppercase tracking-wider text-[#888888] transition-colors hover:text-[#CCFF00]"
                     >
                       {t("continueShop")}
                     </Link>
                     <Link
-                      href="/account"
-                      className="block text-center text-[#888888] text-sm uppercase tracking-wider hover:text-[#CCFF00] transition-colors"
+                      href={APP_URLS.account}
+                      className="block text-center text-sm uppercase tracking-wider text-[#888888] transition-colors hover:text-[#CCFF00]"
                     >
-                      VIEW ORDERS
+                      {t("viewOrders")}
                     </Link>
                   </div>
                 </div>

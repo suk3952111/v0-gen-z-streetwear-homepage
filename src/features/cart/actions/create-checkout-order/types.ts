@@ -1,9 +1,11 @@
 export type CreateCheckoutOrderPayload = {
   orderId: string
   orderNumber: string
-  orderStatus: string
-  paymentStatus: string
+  orderName: string
   totalAmount: number
+  customerKey: string
+  customerEmail: string | null
+  customerName: string | null
 }
 
 export type CreateCheckoutOrderActionState = {
