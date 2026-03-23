@@ -29,6 +29,8 @@ export const adminEnMessages = {
     publish: "PUBLISHED",
     featured: "FEATURED",
     updatedAt: "UPDATED",
+    id: "ID",
+    showing: "Showing {current} / {total}",
   },
   inventoryTable: {
     title: "INVENTORY MANAGEMENT",
@@ -55,6 +57,13 @@ export const adminEnMessages = {
   common: {
     yes: "YES",
     no: "NO",
+    cancel: "CANCEL",
+    prev: "PREV",
+    next: "NEXT",
+    adminOnline: "ADMIN ONLINE",
+    controlPanel: "CONTROL PANEL",
+    version: "v2.0.1",
+    viewAll: "VIEW ALL",
   },
   actions: {
     createProduct: "CREATE PRODUCT",

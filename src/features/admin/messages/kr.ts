@@ -8,8 +8,8 @@ export const adminKrMessages = {
     activity: "활동 로그",
   },
   stats: {
-    sales: "총 매출",
-    orders: "총 주문",
+    sales: "총매출",
+    orders: "총주문",
     pending: "대기 주문",
     lowStock: "재고 부족",
   },
@@ -29,6 +29,8 @@ export const adminKrMessages = {
     publish: "게시",
     featured: "추천",
     updatedAt: "수정일",
+    id: "ID",
+    showing: "{current} / {total}개 표시 중",
   },
   inventoryTable: {
     title: "재고 관리",
@@ -55,6 +57,13 @@ export const adminKrMessages = {
   common: {
     yes: "예",
     no: "아니오",
+    cancel: "취소",
+    prev: "이전",
+    next: "다음",
+    adminOnline: "관리자 접속 중",
+    controlPanel: "관리 패널",
+    version: "v2.0.1",
+    viewAll: "전체 보기",
   },
   actions: {
     createProduct: "상품 추가",
@@ -63,11 +72,11 @@ export const adminKrMessages = {
     manage: "관리",
     applyDelta: "적용",
     failed: "작업에 실패했습니다",
-    confirmDeleteProduct: "이 상품을 삭제할까요? 쇼핑 페이지에서 숨김 처리됩니다.",
+    confirmDeleteProduct: "이 상품을 삭제할까요? 스토어에서 더 이상 보이지 않게 됩니다.",
   },
   form: {
     productName: "상품명",
-    slugOptional: "슬러그 (선택)",
+    slugOptional: "슬러그(선택)",
     basePrice: "기본 가격",
     noBrand: "브랜드 없음",
     initialSize: "초기 사이즈",

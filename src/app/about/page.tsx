@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -14,10 +13,7 @@ import {
   Twitter,
   Zap,
 } from "lucide-react";
-import { Footer } from "@/components/layout/footer";
-import { Header } from "@/components/layout/header";
 import { useLanguage, type Language } from "@/components/providers/language-provider";
-import { AuthModal } from "@/features/users/components/auth-modal";
 
 type FeatureIcon = "eye" | "sparkles" | "zap" | "globe";
 
@@ -215,13 +211,10 @@ const iconMap = {
 
 export default function AboutPage() {
   const { language } = useLanguage();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const t = content[language];
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
-      <Header onAuthClick={() => setIsAuthModalOpen(true)} />
-
       <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden px-4 pb-16 pt-24">
         <div className="absolute inset-0 opacity-10">
           <div
@@ -434,10 +427,6 @@ export default function AboutPage() {
           </Link>
         </div>
       </section>
-
-      <Footer language={language} />
-
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   );
 }
