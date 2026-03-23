@@ -1,6 +1,5 @@
-import Link from "next/link"
-import { APP_URLS } from "@/constants/url"
 import { NoiseOverlay } from "@/components/ui"
+import { PaymentResultView } from "@/features/cart/components/payment-result-view"
 import { createSupabaseAdmin } from "@/lib/supabase/admin"
 
 type SuccessPageProps = {
@@ -247,55 +246,7 @@ export default async function CartSuccessPage({ searchParams }: SuccessPageProps
         <NoiseOverlay />
 
         <div className="relative z-10 mx-auto max-w-3xl">
-          <div className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-8 md:p-12">
-            <p className={`text-sm font-bold uppercase tracking-[0.3em] ${result.ok ? "text-[#00FF88]" : "text-[#ff6666]"}`}>
-              {result.ok ? "PAYMENT SUCCESS" : "PAYMENT FAILED"}
-            </p>
-
-            <h1 className="mt-4 text-4xl font-bold tracking-tight text-white md:text-6xl">
-              {result.ok ? "TOSS PAYMENT COMPLETE" : "PAYMENT COULD NOT BE CONFIRMED"}
-            </h1>
-
-            <p className="mt-6 text-base leading-7 text-[#bbbbbb]">{result.message}</p>
-
-            {!!result.debug?.length && (
-              <div className="mt-6 space-y-2 border-2 border-[#333333] bg-[#111111] p-5 font-mono text-xs">
-                {result.debug.map((line) => (
-                  <p key={line} className="break-all text-[#888888]">
-                    {line}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            {result.ok && (
-              <div className="mt-8 space-y-3 border-2 border-[#333333] bg-[#111111] p-5 font-mono text-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-[#888888]">ORDER</span>
-                  <span className="text-white">{result.orderNumber}</span>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-[#888888]">AMOUNT</span>
-                  <span className="text-white">{Math.round(result.amount).toLocaleString()} KRW</span>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href={APP_URLS.account}
-                className="inline-flex items-center justify-center border-4 border-[#CCFF00] bg-[#CCFF00] px-6 py-4 text-sm font-bold uppercase tracking-[0.2em] text-[#0a0a0a] transition-colors hover:bg-[#0a0a0a] hover:text-[#CCFF00]"
-              >
-                View Orders
-              </Link>
-              <Link
-                href={APP_URLS.shop}
-                className="inline-flex items-center justify-center border-4 border-[#333333] px-6 py-4 text-sm font-bold uppercase tracking-[0.2em] text-[#bbbbbb] transition-colors hover:border-[#CCFF00] hover:text-[#CCFF00]"
-              >
-                Continue Shopping
-              </Link>
-            </div>
-          </div>
+          <PaymentResultView mode="success" result={result} />
         </div>
       </section>
     </main>
