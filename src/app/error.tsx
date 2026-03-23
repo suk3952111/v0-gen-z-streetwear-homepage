@@ -3,6 +3,26 @@
 import { useEffect } from "react"
 import Link from "next/link"
 import { AlertTriangle, RotateCcw, Home } from "lucide-react"
+import { useLanguage } from "@/components/providers/language-provider"
+
+const content = {
+  EN: {
+    badge: "[SYSTEM_FAILURE]",
+    title: "SOMETHING WENT WRONG",
+    description: "An unexpected error occurred while processing your request.",
+    errorId: "ERROR_ID:",
+    retry: "RETRY",
+    goHome: "GO HOME",
+  },
+  KR: {
+    badge: "[SYSTEM_FAILURE]",
+    title: "문제가 발생했습니다",
+    description: "요청을 처리하는 중 예상치 못한 오류가 발생했습니다.",
+    errorId: "오류 ID:",
+    retry: "다시 시도",
+    goHome: "홈으로",
+  },
+} as const
 
 export default function Error({
   error,
@@ -11,13 +31,15 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const { language } = useLanguage()
+  const t = content[language]
+
   useEffect(() => {
     console.error(error)
   }, [error])
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
-      {/* Scan lines background */}
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.03] z-0"
         style={{
@@ -27,7 +49,6 @@ export default function Error({
       />
 
       <div className="relative z-10 max-w-xl w-full text-center">
-        {/* Glitch error code */}
         <div className="relative mb-6">
           <h1
             className="text-[120px] md:text-[180px] font-bold text-[#CCFF00] leading-none tracking-tighter select-none"
@@ -51,7 +72,6 @@ export default function Error({
           </div>
         </div>
 
-        {/* Error icon */}
         <div className="flex justify-center mb-6">
           <div
             className="p-4 border-4 border-[#CCFF00] bg-[#0a0a0a]"
@@ -61,42 +81,36 @@ export default function Error({
           </div>
         </div>
 
-        {/* Error message */}
         <p className="text-[#CCFF00] text-sm font-bold uppercase tracking-[0.3em] mb-3 font-mono">
-          [SYSTEM_FAILURE]
+          {t.badge}
         </p>
         <h2 className="text-white text-2xl md:text-3xl font-bold uppercase tracking-tight mb-4">
-          SOMETHING WENT WRONG
+          {t.title}
         </h2>
-        <p className="text-[#888888] text-base font-mono mb-2 leading-relaxed">
-          {"An unexpected error occurred while processing your request."}
-        </p>
+        <p className="text-[#888888] text-base font-mono mb-2 leading-relaxed">{t.description}</p>
         {error.digest && (
           <p className="text-[#888888]/50 text-xs font-mono mb-8">
-            {"ERROR_ID: "}
-            {error.digest}
+            {t.errorId} {error.digest}
           </p>
         )}
 
-        {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
           <button
             onClick={reset}
             className="flex items-center gap-3 px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-all hover:shadow-[0_0_20px_rgba(204,255,0,0.3)]"
           >
             <RotateCcw className="w-5 h-5" />
-            RETRY
+            {t.retry}
           </button>
           <Link
             href="/"
             className="flex items-center gap-3 px-8 py-4 bg-[#0a0a0a] text-[#CCFF00] font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#CCFF00] hover:text-[#0a0a0a] transition-all hover:shadow-[0_0_20px_rgba(204,255,0,0.3)]"
           >
             <Home className="w-5 h-5" />
-            GO HOME
+            {t.goHome}
           </Link>
         </div>
 
-        {/* Decorative terminal line */}
         <div className="mt-12 font-mono text-xs text-[#CCFF00]/30 tracking-wider">
           {">"} vibe_check --recover --force
           <span className="animate-pulse">_</span>

@@ -337,7 +337,7 @@ export function AccountView() {
                   </h2>
                   {isLoading ? (
                     <p className="text-[#888888] uppercase tracking-wider text-sm">
-                      {locale === "KR" ? "Loading profile..." : "Loading profile..."}
+                      {t("loadingProfile")}
                     </p>
                   ) : isEditingProfile ? (
                     <div className="space-y-6">
@@ -370,7 +370,7 @@ export function AccountView() {
                         </div>
                         <div className="md:col-span-2">
                           <label className="block text-[#888888] text-sm uppercase tracking-wider mb-2">
-                            {locale === "KR" ? "프로필 이미지 URL" : "Profile Image URL"}
+                            {t("profileImageUrl")}
                           </label>
                           <input
                             type="url"
@@ -382,9 +382,7 @@ export function AccountView() {
                             className="w-full px-4 py-3 bg-[#1a1a1a] border-2 border-[#333333] text-white focus:border-[#CCFF00] focus:outline-none"
                           />
                           <p className="mt-2 text-xs text-[#666666]">
-                            {locale === "KR"
-                              ? "http:// 또는 https:// 로 시작하는 이미지 주소를 입력하세요."
-                              : "Use an image URL starting with http:// or https://"}
+                            {t("profileImageHelp")}
                           </p>
                         </div>
                       </div>

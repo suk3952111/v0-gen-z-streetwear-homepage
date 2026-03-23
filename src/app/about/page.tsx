@@ -229,26 +229,20 @@ export default function AboutPage() {
         <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#CCFF00] opacity-5 blur-[150px]" />
 
         <div className="relative z-10 mx-auto max-w-5xl text-center">
-          <p className="mb-6 text-sm font-bold uppercase tracking-[0.4em] text-[#CCFF00]">
-            [{t.heroLabel}]
-          </p>
+          <p className="mb-6 text-sm font-bold uppercase tracking-[0.4em] text-[#CCFF00]">[{t.heroLabel}]</p>
           <h1 className="mb-6 text-7xl font-bold tracking-tighter md:text-9xl">
             <span className="text-white">{t.heroTitle}</span>
             <span className="text-[#CCFF00]">{t.heroTitleAccent}</span>
           </h1>
           <p className="mb-6 text-2xl font-medium text-white md:text-3xl">{t.heroSubtitle}</p>
-          <p className="mx-auto max-w-2xl text-lg leading-relaxed text-[#888888]">
-            {t.heroDescription}
-          </p>
+          <p className="mx-auto max-w-2xl text-lg leading-relaxed text-[#888888]">{t.heroDescription}</p>
         </div>
       </section>
 
       <section className="border-t-4 border-[#CCFF00] px-4 py-24">
         <div className="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-2">
           <div>
-            <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">
-              [{t.missionLabel}]
-            </p>
+            <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">[{t.missionLabel}]</p>
             <h2 className="mb-6 text-5xl font-bold tracking-tighter md:text-7xl">
               <span className="text-white">{t.missionTitle}</span>
               <br />
@@ -275,9 +269,7 @@ export default function AboutPage() {
 
       <section className="border-t-4 border-[#1a1a1a] bg-[#0a0a0a] px-4 py-24">
         <div className="mx-auto max-w-6xl">
-          <p className="mb-4 text-center text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">
-            [{t.featuresLabel}]
-          </p>
+          <p className="mb-4 text-center text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">[{t.featuresLabel}]</p>
 
           <div className="mt-12 grid gap-6 md:grid-cols-2">
             {t.features.map((feature) => {
@@ -310,19 +302,13 @@ export default function AboutPage() {
 
       <section className="border-t-4 border-[#CCFF00] bg-[#CCFF00] px-4 py-24">
         <div className="mx-auto max-w-6xl">
-          <p className="mb-12 text-center text-sm font-bold uppercase tracking-[0.3em] text-[#0a0a0a]">
-            [{t.statsLabel}]
-          </p>
+          <p className="mb-12 text-center text-sm font-bold uppercase tracking-[0.3em] text-[#0a0a0a]">[{t.statsLabel}]</p>
 
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {t.stats.map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className="mb-2 text-5xl font-bold tracking-tighter text-[#0a0a0a] md:text-7xl">
-                  {stat.value}
-                </div>
-                <div className="text-sm font-bold uppercase tracking-wider text-[#0a0a0a]/60">
-                  {stat.label}
-                </div>
+                <div className="mb-2 text-5xl font-bold tracking-tighter text-[#0a0a0a] md:text-7xl">{stat.value}</div>
+                <div className="text-sm font-bold uppercase tracking-wider text-[#0a0a0a]/60">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -359,9 +345,7 @@ export default function AboutPage() {
           </div>
 
           <div className="order-1 md:order-2">
-            <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">
-              [{t.techLabel}]
-            </p>
+            <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">[{t.techLabel}]</p>
             <h2 className="mb-6 text-5xl font-bold tracking-tighter md:text-6xl">
               <span className="text-white">{t.techTitle}</span>
               <br />
@@ -374,24 +358,20 @@ export default function AboutPage() {
 
       <section className="border-t-4 border-[#1a1a1a] px-4 py-24">
         <div className="mx-auto max-w-6xl text-center">
-          <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">
-            [{t.teamLabel}]
-          </p>
+          <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">[{t.teamLabel}]</p>
           <h2 className="mb-6 text-5xl font-bold tracking-tighter md:text-7xl">
             <span className="text-white">{t.teamTitle}</span>
             <br />
             <span className="text-[#CCFF00]">{t.teamTitleAccent}</span>
           </h2>
-          <p className="mx-auto mb-12 max-w-2xl text-lg leading-relaxed text-[#888888]">
-            {t.teamDescription}
-          </p>
+          <p className="mx-auto mb-12 max-w-2xl text-lg leading-relaxed text-[#888888]">{t.teamDescription}</p>
 
           <div className="flex justify-center gap-4">
             <a
               href="https://github.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#0a0a0a] p-4 text-[#CCFF00] transition-all hover:bg-[#CCFF00] hover:text-[#0a0a0a] hover:shadow-[0_0_30px_rgba(204,255,0,0.4)] border-4 border-[#CCFF00]"
+              className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-4 text-[#CCFF00] transition-all hover:bg-[#CCFF00] hover:text-[#0a0a0a] hover:shadow-[0_0_30px_rgba(204,255,0,0.4)]"
               aria-label="GitHub"
             >
               <Github className="h-6 w-6" />
@@ -400,7 +380,7 @@ export default function AboutPage() {
               href="https://twitter.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#0a0a0a] p-4 text-[#CCFF00] transition-all hover:bg-[#CCFF00] hover:text-[#0a0a0a] hover:shadow-[0_0_30px_rgba(204,255,0,0.4)] border-4 border-[#CCFF00]"
+              className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-4 text-[#CCFF00] transition-all hover:bg-[#CCFF00] hover:text-[#0a0a0a] hover:shadow-[0_0_30px_rgba(204,255,0,0.4)]"
               aria-label="Twitter"
             >
               <Twitter className="h-6 w-6" />
