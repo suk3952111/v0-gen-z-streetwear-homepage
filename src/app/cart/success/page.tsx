@@ -15,11 +15,13 @@ type SuccessPageProps = {
 type ConfirmationResult =
   | {
       amount: number
+      debug?: string[]
       message: string
       ok: true
       orderNumber: string
     }
   | {
+      debug?: string[]
       message: string
       ok: false
     }
@@ -50,153 +52,192 @@ const getOrderAmount = (items: OrderItemRow[], shippingFee: number) => {
 }
 
 async function confirmTossPayment(searchParams: Awaited<SuccessPageProps["searchParams"]>): Promise<ConfirmationResult> {
-  const paymentKey = searchParams.paymentKey
-  const orderId = searchParams.orderId
-  const amountParam = searchParams.amount
+  const debug: string[] = []
 
-  if (!paymentKey || !orderId || !amountParam) {
-    return {
-      ok: false,
-      message: "Missing payment confirmation parameters.",
+  try {
+    const paymentKey = searchParams.paymentKey
+    const orderId = searchParams.orderId
+    const amountParam = searchParams.amount
+
+    debug.push(`orderId=${orderId ?? "missing"}`)
+    debug.push(`paymentKey=${paymentKey ?? "missing"}`)
+    debug.push(`amount=${amountParam ?? "missing"}`)
+
+    if (!paymentKey || !orderId || !amountParam) {
+      return {
+        ok: false,
+        message: "Missing payment confirmation parameters.",
+        debug,
+      }
     }
-  }
 
-  const amount = Number(amountParam)
-  if (!Number.isFinite(amount)) {
-    return {
-      ok: false,
-      message: "Invalid payment amount.",
+    const amount = Number(amountParam)
+    if (!Number.isFinite(amount)) {
+      return {
+        ok: false,
+        message: "Invalid payment amount.",
+        debug,
+      }
     }
-  }
 
-  const secretKey = process.env.TOSS_SECRET_KEY
-  if (!secretKey) {
-    return {
-      ok: false,
-      message: "Missing Toss Payments secret key on the server.",
+    const secretKey = process.env.TOSS_SECRET_KEY
+    if (!secretKey) {
+      return {
+        ok: false,
+        message: "Missing Toss Payments secret key on the server.",
+        debug,
+      }
     }
-  }
 
-  const supabase = createSupabaseAdmin()
-  const { data: orderData, error: orderError } = await supabase
-    .from("orders")
-    .select("id, order_number, payment_status, shipping_fee, user_id")
-    .eq("order_number", orderId)
-    .maybeSingle()
+    const supabase = createSupabaseAdmin()
+    debug.push("supabaseAdmin=ready")
 
-  if (orderError) {
-    return {
-      ok: false,
-      message: orderError.message,
+    const { data: orderData, error: orderError } = await supabase
+      .from("orders")
+      .select("id, order_number, payment_status, shipping_fee, user_id")
+      .eq("order_number", orderId)
+      .maybeSingle()
+
+    if (orderError) {
+      return {
+        ok: false,
+        message: orderError.message,
+        debug,
+      }
     }
-  }
 
-  const order = orderData as OrderRow | null
-  if (!order) {
-    return {
-      ok: false,
-      message: "Order not found.",
+    const order = orderData as OrderRow | null
+    if (!order) {
+      return {
+        ok: false,
+        message: "Order not found.",
+        debug,
+      }
     }
-  }
 
-  const { data: itemRows, error: itemError } = await supabase
-    .from("order_items")
-    .select("quantity, unit_price")
-    .eq("order_id", order.id)
+    debug.push(`orderDbId=${order.id}`)
+    debug.push(`paymentStatus=${order.payment_status}`)
 
-  if (itemError) {
-    return {
-      ok: false,
-      message: itemError.message,
+    const { data: itemRows, error: itemError } = await supabase
+      .from("order_items")
+      .select("quantity, unit_price")
+      .eq("order_id", order.id)
+
+    if (itemError) {
+      return {
+        ok: false,
+        message: itemError.message,
+        debug,
+      }
     }
-  }
 
-  const expectedAmount = getOrderAmount((itemRows ?? []) as OrderItemRow[], Number(order.shipping_fee ?? 0))
-  if (expectedAmount !== amount) {
-    await supabase
+    const expectedAmount = getOrderAmount((itemRows ?? []) as OrderItemRow[], Number(order.shipping_fee ?? 0))
+    debug.push(`expectedAmount=${expectedAmount}`)
+
+    if (expectedAmount !== amount) {
+      await supabase
+        .from("orders")
+        .update({
+          payment_status: "failed",
+          status: "cancelled",
+        })
+        .eq("id", order.id)
+
+      return {
+        ok: false,
+        message: "Payment amount verification failed. Please try again.",
+        debug,
+      }
+    }
+
+    if (order.payment_status === "completed") {
+      return {
+        ok: true,
+        orderNumber: order.order_number,
+        amount: expectedAmount,
+        message: "This order has already been paid.",
+        debug,
+      }
+    }
+
+    const authorization = Buffer.from(`${secretKey}:`).toString("base64")
+    const confirmResponse = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${authorization}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        paymentKey,
+        orderId,
+        amount,
+      }),
+      cache: "no-store",
+    })
+
+    debug.push(`confirmStatus=${confirmResponse.status}`)
+
+    if (!confirmResponse.ok) {
+      const errorBody = await confirmResponse.json().catch(() => null) as { code?: string; message?: string } | null
+
+      await supabase
+        .from("orders")
+        .update({
+          payment_status: "failed",
+          status: "cancelled",
+        })
+        .eq("id", order.id)
+
+      if (errorBody?.code) {
+        debug.push(`tossCode=${errorBody.code}`)
+      }
+
+      return {
+        ok: false,
+        message: errorBody?.message ?? "Toss payment confirmation failed.",
+        debug,
+      }
+    }
+
+    const confirmedPayment = await confirmResponse.json() as TossConfirmResponse
+
+    const { error: updateError } = await supabase
       .from("orders")
       .update({
-        payment_status: "failed",
-        status: "cancelled",
+        payment_method: confirmedPayment.method ?? "CARD",
+        payment_status: "completed",
+        status: "confirmed",
+        paid_at: new Date().toISOString(),
       })
       .eq("id", order.id)
 
-    return {
-      ok: false,
-      message: "Payment amount verification failed. Please try again.",
+    if (updateError) {
+      return {
+        ok: false,
+        message: updateError.message,
+        debug,
+      }
     }
-  }
 
-  if (order.payment_status === "completed") {
+    await supabase.from("cart_items").delete().eq("user_id", order.user_id)
+
+    revalidatePath(APP_URLS.cart)
+    revalidatePath(APP_URLS.account)
+
     return {
       ok: true,
       orderNumber: order.order_number,
       amount: expectedAmount,
-      message: "This order has already been paid.",
+      message: "Payment was confirmed successfully.",
+      debug,
     }
-  }
-
-  const authorization = Buffer.from(`${secretKey}:`).toString("base64")
-  const confirmResponse = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${authorization}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      paymentKey,
-      orderId,
-      amount,
-    }),
-    cache: "no-store",
-  })
-
-  if (!confirmResponse.ok) {
-    const errorBody = await confirmResponse.json().catch(() => null) as { message?: string } | null
-
-    await supabase
-      .from("orders")
-      .update({
-        payment_status: "failed",
-        status: "cancelled",
-      })
-      .eq("id", order.id)
-
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unexpected payment confirmation error."
     return {
       ok: false,
-      message: errorBody?.message ?? "Toss payment confirmation failed.",
+      message,
+      debug,
     }
-  }
-
-  const confirmedPayment = await confirmResponse.json() as TossConfirmResponse
-
-  const { error: updateError } = await supabase
-    .from("orders")
-    .update({
-      payment_method: confirmedPayment.method ?? "CARD",
-      payment_status: "completed",
-      status: "confirmed",
-      paid_at: new Date().toISOString(),
-    })
-    .eq("id", order.id)
-
-  if (updateError) {
-    return {
-      ok: false,
-      message: updateError.message,
-    }
-  }
-
-  await supabase.from("cart_items").delete().eq("user_id", order.user_id)
-
-  revalidatePath(APP_URLS.cart)
-  revalidatePath(APP_URLS.account)
-
-  return {
-    ok: true,
-    orderNumber: order.order_number,
-    amount: expectedAmount,
-    message: "Payment was confirmed successfully.",
   }
 }
 
@@ -220,6 +261,16 @@ export default async function CartSuccessPage({ searchParams }: SuccessPageProps
             </h1>
 
             <p className="mt-6 text-base leading-7 text-[#bbbbbb]">{result.message}</p>
+
+            {!!result.debug?.length && (
+              <div className="mt-6 space-y-2 border-2 border-[#333333] bg-[#111111] p-5 font-mono text-xs">
+                {result.debug.map((line) => (
+                  <p key={line} className="break-all text-[#888888]">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            )}
 
             {result.ok && (
               <div className="mt-8 space-y-3 border-2 border-[#333333] bg-[#111111] p-5 font-mono text-sm">

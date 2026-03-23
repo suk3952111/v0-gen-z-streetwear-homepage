@@ -14,15 +14,19 @@ type FailPageProps = {
 async function markOrderAsFailed(orderId?: string) {
   if (!orderId) return
 
-  const supabase = createSupabaseAdmin()
-  await supabase
-    .from("orders")
-    .update({
-      payment_status: "failed",
-      status: "cancelled",
-    })
-    .eq("order_number", orderId)
-    .eq("payment_status", "pending")
+  try {
+    const supabase = createSupabaseAdmin()
+    await supabase
+      .from("orders")
+      .update({
+        payment_status: "failed",
+        status: "cancelled",
+      })
+      .eq("order_number", orderId)
+      .eq("payment_status", "pending")
+  } catch (error) {
+    console.error("[cart/fail] failed to mark order as failed", error)
+  }
 }
 
 export default async function CartFailPage({ searchParams }: FailPageProps) {
