@@ -9,6 +9,8 @@ import { Minus, Plus, Sparkles, X } from "lucide-react"
 import { APP_URLS } from "@/constants/url"
 import { vibeCategories } from "@/mocks/cart"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import { formatProductPriceByLocale } from "@/lib/format/currency"
+import { formatDateByLocale } from "@/lib/format/date"
 import { NoiseOverlay } from "@/components/ui"
 import { useCart } from "@/components/providers/cart-provider"
 import { createSupabaseClient } from "@/lib/supabase/client"
@@ -221,21 +223,13 @@ export function CartView() {
     }
   }
 
-  const formatPrice = (usd: number, krw: number) => {
-    if (locale === "KR") {
-      return `${Math.round(krw).toLocaleString()} KRW`
-    }
-
-    return `$${Math.round(usd)}`
-  }
-
   const subtotal = items.reduce(
     (acc, item) => acc + (locale === "KR" ? item.priceKRW : item.priceUSD) * item.quantity,
     0,
   )
 
   const orderNumber = `VC${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-  const currentDate = new Date().toLocaleDateString(locale === "KR" ? "ko-KR" : "en-US", {
+  const currentDate = formatDateByLocale(new Date(), locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -328,7 +322,11 @@ export function CartView() {
 
                         <div className="flex items-center justify-between gap-6 md:justify-end">
                           <p className="text-2xl font-bold text-[#CCFF00]">
-                            {formatPrice(item.priceUSD * item.quantity, item.priceKRW * item.quantity)}
+                            {formatProductPriceByLocale({
+                              locale,
+                              usd: item.priceUSD * item.quantity,
+                              krw: item.priceKRW * item.quantity,
+                            })}
                           </p>
                           <button
                             onClick={() => void removeFromCart(item.id)}
@@ -399,7 +397,13 @@ export function CartView() {
                           <span className="max-w-[60%] truncate">
                             {item.quantity}x {item.name}
                           </span>
-                          <span>{formatPrice(item.priceUSD * item.quantity, item.priceKRW * item.quantity)}</span>
+                          <span>
+                            {formatProductPriceByLocale({
+                              locale,
+                              usd: item.priceUSD * item.quantity,
+                              krw: item.priceKRW * item.quantity,
+                            })}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -408,7 +412,9 @@ export function CartView() {
 
                     <div className="flex justify-between text-[#888888]">
                       <span>{t("subtotal")}</span>
-                      <span className="text-white">{formatPrice(subtotal, subtotal)}</span>
+                      <span className="text-white">
+                        {formatProductPriceByLocale({ locale, usd: subtotal, krw: subtotal })}
+                      </span>
                     </div>
                     <div className="flex justify-between text-[#888888]">
                       <span>{t("shipping")}</span>
@@ -419,7 +425,9 @@ export function CartView() {
 
                     <div className="flex justify-between text-xl font-bold">
                       <span className="text-white">{t("total")}</span>
-                      <span className="text-[#CCFF00]">{formatPrice(subtotal, subtotal)}</span>
+                      <span className="text-[#CCFF00]">
+                        {formatProductPriceByLocale({ locale, usd: subtotal, krw: subtotal })}
+                      </span>
                     </div>
                   </div>
 

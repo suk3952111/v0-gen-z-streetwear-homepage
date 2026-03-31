@@ -17,6 +17,8 @@ import {
   User,
 } from "lucide-react"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import { formatStoredKrwAmountByLocale } from "@/lib/format/currency"
+import { formatDateByLocale } from "@/lib/format/date"
 import { ConfirmModal, NoiseOverlay } from "@/components/ui"
 import { logoutAction } from "@/features/users/actions/logout"
 import { loadAccountOverviewAction } from "@/features/users/actions/account/load-overview"
@@ -128,19 +130,6 @@ export function AccountView() {
     })
     setEditingAddress(null)
     setIsAddingAddress(false)
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(locale === "KR" ? "ko-KR" : "en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
-  }
-
-  const formatPrice = (amount: number) => {
-    if (locale === "KR") return `${Math.round(amount).toLocaleString()} KRW`
-    return `$${Math.max(1, Math.round(amount / 1000))}`
   }
 
   const handleSaveProfile = async () => {
@@ -432,7 +421,13 @@ export function AccountView() {
                           { label: t("profile.phone"), value: profile?.phone ?? "-" },
                           {
                             label: t("profile.memberSince"),
-                            value: profile?.created_at ? formatDate(profile.created_at) : "-",
+                            value: profile?.created_at
+                              ? formatDateByLocale(profile.created_at, locale, {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })
+                              : "-",
                           },
                         ].map(({ label, value }) => (
                           <div key={label}>
@@ -639,7 +634,14 @@ export function AccountView() {
                             <div className="flex items-center gap-6">
                               {[
                                 { label: t("orders.orderNumber"), value: order.order_number },
-                                { label: t("orders.date"), value: formatDate(order.created_at) },
+                                {
+                                  label: t("orders.date"),
+                                  value: formatDateByLocale(order.created_at, locale, {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  }),
+                                },
                               ].map(({ label, value }) => (
                                 <div key={label}>
                                   <p className="text-[#888888] text-xs uppercase">{label}</p>
@@ -655,7 +657,12 @@ export function AccountView() {
                             </div>
                             <div className="text-right">
                               <p className="text-[#888888] text-xs uppercase">{t("orders.total")}</p>
-                              <p className="text-[#CCFF00] text-xl font-bold">{formatPrice(order.final_amount)}</p>
+                              <p className="text-[#CCFF00] text-xl font-bold">
+                                {formatStoredKrwAmountByLocale({
+                                  locale,
+                                  amountKrw: order.final_amount,
+                                })}
+                              </p>
                             </div>
                           </div>
                           <div className="p-4">

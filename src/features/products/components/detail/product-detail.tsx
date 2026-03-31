@@ -9,6 +9,7 @@ import type { Language } from "@/lib/products"
 import { ReviewSection } from "./review-section"
 import { ImageFocusModal, type FocusImage } from "./image-focus-modal"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import { formatPriceByCurrency } from "@/lib/format/currency"
 import { useCart } from "@/components/providers/cart-provider"
 import { recommendSimilarStyleAction } from "@/features/products/actions/recommend-similar-style"
 import type { ShopProductItem } from "@/features/products/types/shop"
@@ -118,11 +119,6 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
     }
   }, [availableSizes, selectedSize])
 
-  const formatPrice = (p: number, curr: string) => {
-    if (curr === "KRW") return `${p.toLocaleString()}원`
-    return `$${p}`
-  }
-
   const openProductFocus = useCallback((index: number) => {
     setAllFocusImages(productFocusImages)
     setFocusIndex(index)
@@ -225,7 +221,7 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
           <div className="w-full lg:w-1/2 lg:pl-8 lg:border-l-4 lg:border-[#CCFF00]">
             <p className="text-[#CCFF00] text-sm font-bold uppercase tracking-[0.3em] mb-2">{product.category[currentLanguage]}</p>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white uppercase tracking-tighter mb-4 text-balance">{product.name}</h1>
-            <p className="text-4xl md:text-5xl font-bold text-[#CCFF00] mb-6">{formatPrice(currentLanguage === "KR" ? product.priceKRW : product.priceUSD, currentLanguage === "KR" ? "KRW" : "USD")}</p>
+            <p className="text-4xl md:text-5xl font-bold text-[#CCFF00] mb-6">{formatPriceByCurrency(currentLanguage === "KR" ? product.priceKRW : product.priceUSD, currentLanguage === "KR" ? "KRW" : "USD")}</p>
             <p className="text-white text-lg leading-relaxed mb-8 border-l-4 border-[#CCFF00] pl-4">{description[currentLanguage]}</p>
 
             <div className="mb-8">
@@ -302,7 +298,7 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
                 </div>
                 <div className="p-4 border-t-4 border-[#CCFF00]">
                   <h3 className="text-white text-lg font-bold uppercase tracking-tight mb-2 truncate">{sp.name}</h3>
-                  <p className="text-[#CCFF00] text-xl font-bold">{formatPrice(currentLanguage === "KR" ? sp.priceKRW : sp.priceUSD, currentLanguage === "KR" ? "KRW" : "USD")}</p>
+                  <p className="text-[#CCFF00] text-xl font-bold">{formatPriceByCurrency(currentLanguage === "KR" ? sp.priceKRW : sp.priceUSD, currentLanguage === "KR" ? "KRW" : "USD")}</p>
                 </div>
               </Link>
             ))}

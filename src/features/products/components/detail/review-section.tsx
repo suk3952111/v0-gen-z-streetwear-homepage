@@ -6,6 +6,7 @@ import Image from "next/image"
 import { Star, X, CheckCircle, ThumbsUp, Camera } from "lucide-react"
 import { motion } from "framer-motion"
 import type { Language } from "@/lib/products"
+import { formatDateByLocale } from "@/lib/format/date"
 import type { FocusImage } from "./image-focus-modal"
 import { loadProductReviewsAction } from "@/features/products/actions/load-product-reviews"
 import { createProductReviewAction } from "@/features/products/actions/create-product-review"
@@ -176,13 +177,6 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
     setReviewContent("")
     setUploadedImages([])
     await loadReviews(sortBy)
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(
-      language === "KR" ? "ko-KR" : "en-US",
-      { year: "numeric", month: "short", day: "numeric" }
-    )
   }
 
   // 리뷰 이미지를 클릭하면 전체 배열 기준 인덱스를 계산
@@ -383,7 +377,13 @@ export function ReviewSection({ productId, language, onImageClick }: ReviewSecti
                     </div>
                   </div>
                 </div>
-                <span className="text-[#888888] text-sm">{formatDate(review.created_at)}</span>
+                <span className="text-[#888888] text-sm">
+                  {formatDateByLocale(review.created_at, language, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
               </div>
 
               {review.title && (

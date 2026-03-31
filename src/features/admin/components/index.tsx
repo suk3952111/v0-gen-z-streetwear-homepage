@@ -22,6 +22,8 @@ import {
   deleteAdminProductAction,
   updateAdminVariantStockAction,
 } from "@/features/admin/actions/manage-catalog"
+import { formatStoredKrwAmountByLocale } from "@/lib/format/currency"
+import { formatDateByLocale } from "@/lib/format/date"
 
 type Tab = "dashboard" | "products" | "orders" | "inventory" | "activity"
 
@@ -117,20 +119,6 @@ export function AdminView() {
     await loadDashboard(page)
     setIsMutating(false)
   }
-
-  const formatPrice = (value: number) => {
-    if (locale === "KR") return `${Math.round(value).toLocaleString()} KRW`
-    return `$${Math.max(1, Math.round(value / 1000))}`
-  }
-
-  const formatDate = (value: string) =>
-    new Date(value).toLocaleDateString(locale === "KR" ? "ko-KR" : "en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
 
   const statusColor = (status: string) => {
     switch (status) {
@@ -341,7 +329,7 @@ export function AdminView() {
                   </>
                 ) : (
                   <>
-                    <article className="border-4 border-[#CCFF00] p-6"><Activity className="mb-4 h-8 w-8 text-[#00FF88]" /><p className="mb-1 text-xs font-bold uppercase tracking-[0.3em] text-[#888888]">{t("stats.sales")}</p><p className="text-3xl font-bold text-white">{formatPrice(payload?.stats.sales ?? 0)}</p></article>
+                    <article className="border-4 border-[#CCFF00] p-6"><Activity className="mb-4 h-8 w-8 text-[#00FF88]" /><p className="mb-1 text-xs font-bold uppercase tracking-[0.3em] text-[#888888]">{t("stats.sales")}</p><p className="text-3xl font-bold text-white">{formatStoredKrwAmountByLocale({ locale, amountKrw: payload?.stats.sales ?? 0 })}</p></article>
                     <article className="border-4 border-[#CCFF00] p-6"><ShoppingCart className="mb-4 h-8 w-8 text-[#CCFF00]" /><p className="mb-1 text-xs font-bold uppercase tracking-[0.3em] text-[#888888]">{t("stats.orders")}</p><p className="text-3xl font-bold text-white">{payload?.stats.orders ?? 0}</p></article>
                     <article className="border-4 border-[#FFCC00] p-6"><Clock className="mb-4 h-8 w-8 text-[#FFCC00]" /><p className="mb-1 text-xs font-bold uppercase tracking-[0.3em] text-[#888888]">{t("stats.pending")}</p><p className="text-3xl font-bold text-[#FFCC00]">{payload?.stats.pending ?? 0}</p></article>
                     <article className="border-4 border-[#FF4444] p-6"><AlertTriangle className="mb-4 h-8 w-8 text-[#FF4444]" /><p className="mb-1 text-xs font-bold uppercase tracking-[0.3em] text-[#888888]">{t("stats.lowStock")}</p><p className="text-3xl font-bold text-[#FF4444]">{payload?.stats.lowStock ?? 0}</p></article>
@@ -362,7 +350,7 @@ export function AdminView() {
                     {(payload?.orders ?? []).slice(0, 3).map((order) => (
                       <div key={order.id} className="flex items-center justify-between gap-4 border-2 border-[#222222] bg-[#111111] p-4 transition-colors hover:border-[#CCFF00]">
                         <div><p className="font-bold tracking-wider text-white">{order.orderNumber}</p><p className="text-sm text-[#888888]">{order.customer}</p></div>
-                        <div className="text-right"><span className={`inline-block px-3 py-1 text-xs font-bold uppercase ${statusColor(order.status)}`}>{t(`statuses.${order.status}`)}</span><p className="mt-1 font-bold text-[#CCFF00]">{formatPrice(order.total)}</p></div>
+                        <div className="text-right"><span className={`inline-block px-3 py-1 text-xs font-bold uppercase ${statusColor(order.status)}`}>{t(`statuses.${order.status}`)}</span><p className="mt-1 font-bold text-[#CCFF00]">{formatStoredKrwAmountByLocale({ locale, amountKrw: order.total })}</p></div>
                       </div>
                     ))}
                   </div>
@@ -424,10 +412,10 @@ export function AdminView() {
                           <td className="px-4 py-4 font-mono text-xs text-[#888888]">{product.id}</td>
                           <td className="px-4 py-4"><p className="font-bold uppercase tracking-wider text-white">{product.name}</p><p className="mt-1 font-mono text-xs text-[#888888]">/{product.slug}</p></td>
                           <td className="px-4 py-4"><span className="border-2 border-[#333333] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#888888] group-hover:border-[#CCFF00] group-hover:text-[#CCFF00]">{product.category}</span></td>
-                          <td className="px-4 py-4 text-lg font-bold text-[#CCFF00]">{formatPrice(product.basePrice)}</td>
+                          <td className="px-4 py-4 text-lg font-bold text-[#CCFF00]">{formatStoredKrwAmountByLocale({ locale, amountKrw: product.basePrice })}</td>
                           <td className="px-4 py-4"><span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider ${product.isPublished ? "border-2 border-[#CCFF00] text-[#CCFF00]" : "border-2 border-[#888888] text-[#888888]"}`}>{product.isPublished ? t("common.yes") : t("common.no")}</span></td>
                           <td className="px-4 py-4"><span className={product.isFeatured ? "text-[#00FF88]" : "text-[#888888]"}>{product.isFeatured ? t("common.yes") : t("common.no")}</span></td>
-                          <td className="px-4 py-4 text-sm text-[#888888]">{formatDate(product.updatedAt)}</td>
+                          <td className="px-4 py-4 text-sm text-[#888888]">{formatDateByLocale(product.updatedAt, locale, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                           <td className="px-4 py-4">
                             <div className="flex items-center justify-end gap-2">
                               <button
@@ -488,8 +476,8 @@ export function AdminView() {
                           <td className="px-4 py-4 font-bold tracking-wider text-white">{order.orderNumber}</td>
                           <td className="px-4 py-4 text-white">{order.customer}</td>
                           <td className="px-4 py-4"><span className={`inline-block px-3 py-1 text-xs font-bold uppercase ${statusColor(order.status)}`}>{t(`statuses.${order.status}`)}</span></td>
-                          <td className="px-4 py-4 text-sm text-[#888888]">{order.createdAt ? formatDate(order.createdAt) : "-"}</td>
-                          <td className="px-4 py-4 text-right text-lg font-bold text-[#CCFF00]">{formatPrice(order.total)}</td>
+                          <td className="px-4 py-4 text-sm text-[#888888]">{order.createdAt ? formatDateByLocale(order.createdAt, locale, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}</td>
+                          <td className="px-4 py-4 text-right text-lg font-bold text-[#CCFF00]">{formatStoredKrwAmountByLocale({ locale, amountKrw: order.total })}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -531,7 +519,7 @@ export function AdminView() {
                           <td className="px-4 py-4 text-white">{item.size}</td>
                           <td className={`px-4 py-4 text-lg font-bold ${getStockColor(item.stockQuantity)}`}>{item.stockQuantity}</td>
                           <td className="px-4 py-4"><span className={item.isActive ? "text-[#00FF88]" : "text-[#888888]"}>{item.isActive ? t("common.yes") : t("common.no")}</span></td>
-                          <td className="px-4 py-4 text-sm text-[#888888]">{formatDate(item.updatedAt)}</td>
+                          <td className="px-4 py-4 text-sm text-[#888888]">{formatDateByLocale(item.updatedAt, locale, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                           <td className="px-4 py-4">
                             <div className="flex flex-wrap items-center justify-end gap-2">
                               {[1, 5, 10].map((value) => (
@@ -580,7 +568,7 @@ export function AdminView() {
                           <td className="px-4 py-4 uppercase text-[#CCFF00]">{log.actionType}</td>
                           <td className="px-4 py-4 text-white">{log.targetTable}</td>
                           <td className="px-4 py-4 text-[#888888]">{log.description ?? "-"}</td>
-                          <td className="px-4 py-4 text-sm text-[#888888]">{formatDate(log.createdAt)}</td>
+                          <td className="px-4 py-4 text-sm text-[#888888]">{formatDateByLocale(log.createdAt, locale, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                         </tr>
                       ))}
                     </tbody>

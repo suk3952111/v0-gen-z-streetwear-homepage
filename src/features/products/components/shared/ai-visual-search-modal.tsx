@@ -6,6 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { X, Upload, Sparkles, ScanLine } from "lucide-react"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import { formatPriceByCurrency } from "@/lib/format/currency"
 import { findStyleByImageAction } from "@/features/products/actions/find-style-by-image"
 import type { ShopProductItem } from "@/features/products/types/shop"
 
@@ -27,11 +28,6 @@ export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProp
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { locale, t } = useI18n("products.visualSearch")
-
-  const formatPrice = (p: number, curr: string) => {
-    if (curr === "KRW") return `${p.toLocaleString()}원`
-    return `$${p}`
-  }
 
   const handleFileUpload = useCallback((file: File) => {
     if (file && file.type.startsWith("image/")) {
@@ -194,7 +190,7 @@ export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProp
                           <div className="p-3 border-t-4 border-[#CCFF00]">
                             <h4 className="text-white text-sm font-bold uppercase tracking-tight truncate mb-1">{product.name}</h4>
                             <div className="flex items-center justify-between">
-                              <p className="text-[#CCFF00] font-bold">{formatPrice(locale === "KR" ? product.priceKRW : product.priceUSD, locale === "KR" ? "KRW" : "USD")}</p>
+                              <p className="text-[#CCFF00] font-bold">{formatPriceByCurrency(locale === "KR" ? product.priceKRW : product.priceUSD, locale === "KR" ? "KRW" : "USD")}</p>
                               <span className="text-white/50 text-xs font-bold uppercase group-hover:text-[#CCFF00] transition-colors">{t("viewProduct")}</span>
                             </div>
                           </div>

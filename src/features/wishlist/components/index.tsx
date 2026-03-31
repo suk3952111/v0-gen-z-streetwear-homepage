@@ -7,6 +7,7 @@ import { Heart, ShoppingBag, X } from "lucide-react"
 import { useWishlist } from "@/components/providers/wishlist-provider"
 import { useCart } from "@/components/providers/cart-provider"
 import { useI18n } from "@/lib/i18n/use-i18n"
+import { formatProductPriceByLocale } from "@/lib/format/currency"
 import { NoiseOverlay } from "@/components/ui"
 import { createSupabaseClient } from "@/lib/supabase/client"
 import { getProductsBySlugs } from "@/features/products/services"
@@ -71,6 +72,7 @@ export function WishlistView() {
             .filter((slug): slug is string => typeof slug === "string" && slug.trim().length > 0),
         ),
       ]
+
       if (slugs.length === 0) {
         if (!isHydrating) {
           setWishlistProducts([])
@@ -91,6 +93,7 @@ export function WishlistView() {
     }
 
     void load()
+
     return () => {
       cancelled = true
     }
@@ -106,10 +109,6 @@ export function WishlistView() {
     filteredWishlistProducts.length === 1
       ? t("itemCountOne", { count: filteredWishlistProducts.length })
       : t("itemCountOther", { count: filteredWishlistProducts.length })
-
-  const formatPrice = (product: ShopProductItem) => {
-    return locale === "KR" ? `${product.priceKRW.toLocaleString()}원` : `$${product.priceUSD}`
-  }
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
@@ -189,7 +188,13 @@ export function WishlistView() {
                         {product.name}
                       </h3>
                       <div className="mb-4 flex items-center justify-between">
-                        <p className="text-xl font-bold text-[#CCFF00]">{formatPrice(product)}</p>
+                        <p className="text-xl font-bold text-[#CCFF00]">
+                          {formatProductPriceByLocale({
+                            locale,
+                            usd: product.priceUSD,
+                            krw: product.priceKRW,
+                          })}
+                        </p>
                       </div>
                       <div className="flex gap-2">
                         <button
