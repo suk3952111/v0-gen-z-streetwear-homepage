@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Heart, ShoppingBag, X } from "lucide-react"
 import { useWishlist } from "@/components/providers/wishlist-provider"
+import { useCart } from "@/components/providers/cart-provider"
 import { useI18n } from "@/lib/i18n/use-i18n"
 import { NoiseOverlay } from "@/components/ui"
 import { createSupabaseClient } from "@/lib/supabase/client"
@@ -14,8 +15,50 @@ import type { ShopProductItem } from "@/features/products/types/shop"
 export function WishlistView() {
   const { locale, t } = useI18n("wishlist")
   const { wishlist, removeFromWishlist, isHydrating } = useWishlist()
+  const { addToCart } = useCart()
   const [wishlistProducts, setWishlistProducts] = useState<ShopProductItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [pendingProductId, setPendingProductId] = useState<string | null>(null)
+  const [sizePickerProduct, setSizePickerProduct] = useState<ShopProductItem | null>(null)
+  const [selectedSize, setSelectedSize] = useState<string | null>(null)
+
+  const getAvailableSizes = (product: ShopProductItem) => {
+    if (product.id.startsWith("acc-")) return ["ONE SIZE"]
+    if (product.sizes.length === 0) return ["ONE SIZE"]
+    return product.sizes
+  }
+
+  const addProductToBag = async (product: ShopProductItem, size: string) => {
+    setPendingProductId(product.id)
+    try {
+      await addToCart(product.id, { quantity: 1, size })
+      await removeFromWishlist(product.id)
+    } finally {
+      setPendingProductId(null)
+    }
+  }
+
+  const closeSizePicker = () => {
+    setSizePickerProduct(null)
+    setSelectedSize(null)
+  }
+
+  const handleAddToBag = async (product: ShopProductItem) => {
+    const availableSizes = getAvailableSizes(product)
+    if (availableSizes.length === 1 && availableSizes[0] === "ONE SIZE") {
+      await addProductToBag(product, "ONE SIZE")
+      return
+    }
+
+    setSizePickerProduct(product)
+    setSelectedSize(availableSizes[0] ?? null)
+  }
+
+  const handleConfirmSize = async () => {
+    if (!sizePickerProduct || !selectedSize) return
+    await addProductToBag(sizePickerProduct, selectedSize)
+    closeSizePicker()
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -148,9 +191,18 @@ export function WishlistView() {
                         <p className="text-[#CCFF00] text-xl font-bold">{formatPrice(product)}</p>
                       </div>
                       <div className="flex gap-2">
-                        <button className="flex-1 py-3 bg-[#CCFF00] text-[#0a0a0a] text-sm font-bold uppercase tracking-wider hover:bg-white transition-colors flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleAddToBag(product)}
+                          disabled={pendingProductId === product.id}
+                          className="flex-1 py-3 bg-[#CCFF00] text-[#0a0a0a] text-sm font-bold uppercase tracking-wider hover:bg-white transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
                           <ShoppingBag className="w-4 h-4" />
-                          {t("addToBag")}
+                          {pendingProductId === product.id
+                            ? locale === "KR"
+                              ? "추가 중..."
+                              : "ADDING..."
+                            : t("addToBag")}
                         </button>
                       </div>
                     </div>
@@ -170,6 +222,68 @@ export function WishlistView() {
           )}
         </div>
       </section>
+
+      {sizePickerProduct ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Close size picker"
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={closeSizePicker}
+          />
+          <div className="relative z-10 w-full max-w-md border-4 border-[#CCFF00] bg-[#0a0a0a] p-6 shadow-[10px_10px_0px_#CCFF00]">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">
+                  {locale === "KR" ? "사이즈 선택" : "Select Size"}
+                </p>
+                <h2 className="mt-2 text-2xl font-bold uppercase tracking-tight text-white">
+                  {sizePickerProduct.name}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={closeSizePicker}
+                className="border-2 border-[#CCFF00] p-2 text-[#CCFF00] transition-colors hover:bg-[#CCFF00] hover:text-[#0a0a0a]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mb-6 flex flex-wrap gap-3">
+              {getAvailableSizes(sizePickerProduct).map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setSelectedSize(size)}
+                  className={`min-w-14 border-4 px-4 py-3 text-base font-bold uppercase transition-all ${
+                    selectedSize === size
+                      ? "border-[#CCFF00] bg-[#CCFF00] text-[#0a0a0a]"
+                      : "border-[#CCFF00] bg-[#0a0a0a] text-white hover:bg-[#1a1a1a]"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void handleConfirmSize()}
+              disabled={!selectedSize || pendingProductId === sizePickerProduct.id}
+              className="w-full border-4 border-[#CCFF00] bg-[#CCFF00] px-6 py-4 text-lg font-bold uppercase tracking-wider text-[#0a0a0a] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {pendingProductId === sizePickerProduct.id
+                ? locale === "KR"
+                  ? "추가 중..."
+                  : "ADDING..."
+                : locale === "KR"
+                  ? "장바구니에 담기"
+                  : "ADD TO BAG"}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </main>
   )
 }
