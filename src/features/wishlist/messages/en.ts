@@ -13,4 +13,9 @@ export const wishlistEnMessages = {
   basedOnWishlist: "Based on your wishlist vibe",
   itemCountOne: "{count} ITEM SAVED",
   itemCountOther: "{count} ITEMS SAVED",
+  loading: "LOADING WISHLIST...",
+  adding: "ADDING...",
+  sizePickerTitle: "SELECT SIZE",
+  confirmAdd: "ADD TO BAG",
+  closeSizePicker: "Close size picker",
 } as const

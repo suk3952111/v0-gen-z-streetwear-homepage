@@ -84,13 +84,13 @@ export function WishlistView() {
         const products = await getProductsBySlugs(supabase, slugs)
         if (!cancelled) setWishlistProducts(products)
       } catch {
-        // keep previous list on transient failures
+        // Keep the current list on transient failures.
       } finally {
         if (!cancelled) setIsLoading(false)
       }
     }
 
-    load()
+    void load()
     return () => {
       cancelled = true
     }
@@ -113,59 +113,60 @@ export function WishlistView() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
-      <section className="relative pt-24 pb-20 px-4 md:px-8">
+      <section className="relative px-4 pb-20 pt-24 md:px-8">
         <NoiseOverlay />
 
-        <div className="relative z-10 max-w-7xl mx-auto">
+        <div className="relative z-10 mx-auto max-w-7xl">
           <div className="mb-12 border-b-4 border-[#CCFF00] pb-6">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
-                <h1 className="text-6xl md:text-8xl font-bold text-white tracking-tighter leading-none">
+                <h1 className="text-6xl font-bold leading-none tracking-tighter text-white md:text-8xl">
                   {t("title")}
                   <span className="text-[#CCFF00]">{t("titleAccent")}</span>
                 </h1>
-                <p className="text-[#888888] uppercase tracking-wider mt-2">{itemCountLabel}</p>
+                <p className="mt-2 uppercase tracking-wider text-[#888888]">{itemCountLabel}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Heart className="w-6 h-6 text-[#CCFF00] fill-[#CCFF00]" />
-                <span className="text-[#CCFF00] text-2xl font-bold">{filteredWishlistProducts.length}</span>
+                <Heart className="h-6 w-6 fill-[#CCFF00] text-[#CCFF00]" />
+                <span className="text-2xl font-bold text-[#CCFF00]">{filteredWishlistProducts.length}</span>
               </div>
             </div>
           </div>
 
-          {(isHydrating || isLoading) ? (
-            <div className="text-center py-20 border-4 border-dashed border-[#333333]">
-              <p className="text-[#888888] text-xl uppercase tracking-wider">Loading wishlist...</p>
+          {isHydrating || isLoading ? (
+            <div className="border-4 border-dashed border-[#333333] py-20 text-center">
+              <p className="text-xl uppercase tracking-wider text-[#888888]">{t("loading")}</p>
             </div>
           ) : filteredWishlistProducts.length === 0 ? (
-            <div className="text-center py-20 border-4 border-dashed border-[#333333]">
-              <Heart className="w-20 h-20 text-[#333333] mx-auto mb-6" />
-              <p className="text-[#888888] text-2xl uppercase tracking-wider mb-2">{t("empty")}</p>
-              <p className="text-[#666666] text-sm uppercase tracking-wider mb-8">{t("emptySubtitle")}</p>
+            <div className="border-4 border-dashed border-[#333333] py-20 text-center">
+              <Heart className="mx-auto mb-6 h-20 w-20 text-[#333333]" />
+              <p className="mb-2 text-2xl uppercase tracking-wider text-[#888888]">{t("empty")}</p>
+              <p className="mb-8 text-sm uppercase tracking-wider text-[#666666]">{t("emptySubtitle")}</p>
               <Link
                 href="/shop"
-                className="inline-block px-8 py-4 bg-[#CCFF00] text-[#0a0a0a] text-xl font-bold uppercase tracking-wider border-4 border-[#CCFF00] hover:bg-[#0a0a0a] hover:text-[#CCFF00] transition-colors"
+                className="inline-block border-4 border-[#CCFF00] bg-[#CCFF00] px-8 py-4 text-xl font-bold uppercase tracking-wider text-[#0a0a0a] transition-colors hover:bg-[#0a0a0a] hover:text-[#CCFF00]"
               >
                 {t("shopNow")}
               </Link>
             </div>
           ) : (
             <div className="space-y-12">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {filteredWishlistProducts.map((product) => (
                   <div
                     key={product.id}
-                    className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00]"
+                    className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:-translate-y-1 hover:translate-x-1 hover:shadow-[8px_8px_0px_#CCFF00]"
                   >
                     <button
-                      onClick={() => removeFromWishlist(product.id)}
-                      className="absolute top-3 right-3 z-20 p-2 bg-[#0a0a0a]/80 border-2 border-[#ff4444] text-[#ff4444] hover:bg-[#ff4444] hover:text-white transition-all"
+                      type="button"
+                      onClick={() => void removeFromWishlist(product.id)}
+                      className="absolute right-3 top-3 z-20 border-2 border-[#ff4444] bg-[#0a0a0a]/80 p-2 text-[#ff4444] transition-all hover:bg-[#ff4444] hover:text-white"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="h-4 w-4" />
                     </button>
 
-                    <div className="absolute top-3 left-3 z-20 p-2 bg-[#CCFF00] border-2 border-[#CCFF00]">
-                      <Heart className="w-5 h-5 text-[#0a0a0a] fill-current" />
+                    <div className="absolute left-3 top-3 z-20 border-2 border-[#CCFF00] bg-[#CCFF00] p-2">
+                      <Heart className="h-5 w-5 fill-current text-[#0a0a0a]" />
                     </div>
 
                     <Link href={`/product/${product.id}`}>
@@ -176,33 +177,29 @@ export function WishlistView() {
                           fill
                           className="object-cover transition-transform duration-500 group-hover:scale-110"
                         />
-                        <div className="absolute inset-0 bg-[#CCFF00] opacity-0 group-hover:opacity-10 transition-opacity" />
+                        <div className="absolute inset-0 bg-[#CCFF00] opacity-0 transition-opacity group-hover:opacity-10" />
                       </div>
                     </Link>
 
-                    <div className="p-4 border-t-4 border-[#CCFF00]">
-                      <p className="text-[#CCFF00] text-xs font-bold uppercase tracking-wider mb-1">
+                    <div className="border-t-4 border-[#CCFF00] p-4">
+                      <p className="mb-1 text-xs font-bold uppercase tracking-wider text-[#CCFF00]">
                         {product.category[locale]}
                       </p>
-                      <h3 className="text-white text-lg font-bold uppercase tracking-tight mb-2 truncate">
+                      <h3 className="mb-2 truncate text-lg font-bold uppercase tracking-tight text-white">
                         {product.name}
                       </h3>
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-[#CCFF00] text-xl font-bold">{formatPrice(product)}</p>
+                      <div className="mb-4 flex items-center justify-between">
+                        <p className="text-xl font-bold text-[#CCFF00]">{formatPrice(product)}</p>
                       </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => void handleAddToBag(product)}
                           disabled={pendingProductId === product.id}
-                          className="flex-1 py-3 bg-[#CCFF00] text-[#0a0a0a] text-sm font-bold uppercase tracking-wider hover:bg-white transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                          className="flex flex-1 items-center justify-center gap-2 bg-[#CCFF00] py-3 text-sm font-bold uppercase tracking-wider text-[#0a0a0a] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
                         >
-                          <ShoppingBag className="w-4 h-4" />
-                          {pendingProductId === product.id
-                            ? locale === "KR"
-                              ? "추가 중..."
-                              : "ADDING..."
-                            : t("addToBag")}
+                          <ShoppingBag className="h-4 w-4" />
+                          {pendingProductId === product.id ? t("adding") : t("addToBag")}
                         </button>
                       </div>
                     </div>
@@ -213,7 +210,7 @@ export function WishlistView() {
               <div className="text-center">
                 <Link
                   href="/shop"
-                  className="inline-block text-[#888888] text-sm uppercase tracking-wider hover:text-[#CCFF00] transition-colors"
+                  className="inline-block text-sm uppercase tracking-wider text-[#888888] transition-colors hover:text-[#CCFF00]"
                 >
                   {t("continueShopping")}
                 </Link>
@@ -227,16 +224,14 @@ export function WishlistView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <button
             type="button"
-            aria-label="Close size picker"
+            aria-label={t("closeSizePicker")}
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={closeSizePicker}
           />
           <div className="relative z-10 w-full max-w-md border-4 border-[#CCFF00] bg-[#0a0a0a] p-6 shadow-[10px_10px_0px_#CCFF00]">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">
-                  {locale === "KR" ? "사이즈 선택" : "Select Size"}
-                </p>
+                <p className="text-sm font-bold uppercase tracking-[0.3em] text-[#CCFF00]">{t("sizePickerTitle")}</p>
                 <h2 className="mt-2 text-2xl font-bold uppercase tracking-tight text-white">
                   {sizePickerProduct.name}
                 </h2>
@@ -273,13 +268,7 @@ export function WishlistView() {
               disabled={!selectedSize || pendingProductId === sizePickerProduct.id}
               className="w-full border-4 border-[#CCFF00] bg-[#CCFF00] px-6 py-4 text-lg font-bold uppercase tracking-wider text-[#0a0a0a] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {pendingProductId === sizePickerProduct.id
-                ? locale === "KR"
-                  ? "추가 중..."
-                  : "ADDING..."
-                : locale === "KR"
-                  ? "장바구니에 담기"
-                  : "ADD TO BAG"}
+              {pendingProductId === sizePickerProduct.id ? t("adding") : t("confirmAdd")}
             </button>
           </div>
         </div>
