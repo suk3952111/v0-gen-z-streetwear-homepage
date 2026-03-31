@@ -1,30 +1,17 @@
 "use server"
 
 import { createSupabaseServer } from "@/lib/supabase/server"
-import type { AccountAddress, AccountOrder, AccountOverview } from "@/features/users/types/account"
+import type { AccountOrder, AccountOverview } from "@/features/users/types/account"
 import type { Database } from "@/types/database.types"
+import { mapAccountAddresses, type UserAddressRow } from "../address-utils"
 import type { LoadAccountOverviewActionState } from "./types"
 
-type UserAddressRow = Database["public"]["Tables"]["user_addresses"]["Row"]
 type OrderRow = Database["public"]["Tables"]["orders"]["Row"]
 type OrderItemRow = {
   order_id: string
   quantity: number
   unit_price: number
   product: { name: string } | null
-}
-
-const mapAddresses = (rows: UserAddressRow[]): AccountAddress[] => {
-  return rows.map((row) => ({
-    id: row.id,
-    recipient_name: row.recipient_name,
-    phone: row.phone,
-    address_line1: row.base_address,
-    address_line2: row.detail_address ?? "",
-    city: row.city,
-    postal_code: row.postal_code,
-    is_default: Boolean(row.is_default),
-  }))
 }
 
 const mapOrders = (
@@ -132,7 +119,7 @@ export async function loadAccountOverviewAction(): Promise<LoadAccountOverviewAc
         phone: profileRow.phone,
         created_at: profileRow.created_at,
       },
-      addresses: mapAddresses((addressRows ?? []) as UserAddressRow[]),
+      addresses: mapAccountAddresses((addressRows ?? []) as UserAddressRow[]),
       orders: mapOrders(safeOrders, itemRows),
     }
 

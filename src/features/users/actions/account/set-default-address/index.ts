@@ -1,37 +1,12 @@
 "use server"
 
-import type { SupabaseClient } from "@supabase/supabase-js"
 import { createSupabaseServer } from "@/lib/supabase/server"
-import type { Database } from "@/types/database.types"
+import { loadAccountAddresses } from "../address-utils"
 import {
   SetDefaultAccountAddressSchema,
   type SetDefaultAccountAddressInput,
 } from "./schema"
 import type { SetDefaultAccountAddressActionState } from "./types"
-
-type UserAddressRow = Database["public"]["Tables"]["user_addresses"]["Row"]
-
-const loadAddresses = async (supabase: SupabaseClient<Database>, userId: string) => {
-  const { data, error } = await supabase
-    .from("user_addresses")
-    .select("id, recipient_name, phone, base_address, detail_address, city, postal_code, is_default")
-    .eq("user_id", userId)
-    .order("is_default", { ascending: false })
-    .order("created_at", { ascending: false })
-
-  if (error) throw new Error(error.message)
-
-  return ((data ?? []) as UserAddressRow[]).map((row) => ({
-    id: row.id,
-    recipient_name: row.recipient_name,
-    phone: row.phone,
-    address_line1: row.base_address,
-    address_line2: row.detail_address ?? "",
-    city: row.city,
-    postal_code: row.postal_code,
-    is_default: Boolean(row.is_default),
-  }))
-}
 
 export async function setDefaultAccountAddressAction(
   input: SetDefaultAccountAddressInput,
@@ -73,7 +48,7 @@ export async function setDefaultAccountAddressAction(
       .eq("user_id", user.id)
     if (setError) throw new Error(setError.message)
 
-    const addresses = await loadAddresses(supabase, user.id)
+    const addresses = await loadAccountAddresses(supabase, user.id)
     return {
       success: true,
       data: addresses,
