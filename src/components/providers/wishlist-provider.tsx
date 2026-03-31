@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, type ReactNode } from "react"
+import { useAuthSyncedStorage } from "@/components/providers/use-auth-synced-storage"
 import { createSupabaseClient } from "@/lib/supabase/client"
 import {
   addWishlistItem,
@@ -8,7 +9,6 @@ import {
   removeWishlistItem,
   syncLocalWishlistToUser,
 } from "@/features/wishlist/services"
-import { ensureUserProfile } from "@/features/users/services"
 import { withTimeout } from "@/lib/utils/with-timeout"
 
 export interface WishlistItem {
@@ -73,9 +73,6 @@ const normalizeWishlistStorage = (raw: unknown): WishlistItem[] => {
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlist, setWishlist] = useState<WishlistItem[]>([])
-  const [storageMode, setStorageMode] = useState<"local" | "supabase">("local")
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [isHydrating, setIsHydrating] = useState(true)
   const supabase = useMemo(() => createSupabaseClient(), [])
 
   const loadLocalWishlist = useCallback(() => {
@@ -129,124 +126,20 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      await syncLocalWishlistToUser(supabase, userId, localItems)
+      await withTimeout(syncLocalWishlistToUser(supabase, userId, localItems), 5000)
 
       localStorage.removeItem(LOCAL_WISHLIST_KEY)
     },
     [supabase],
   )
 
-  useEffect(() => {
-    let isActive = true
-
-    const initialize = async () => {
-      setIsHydrating(true)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!isActive) return
-
-      if (!user) {
-        console.log("[wishlist] initialize -> local mode (no user)")
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalWishlist()
-        setIsHydrating(false)
-        return
-      }
-
-      try {
-        await withTimeout(ensureUserProfile(supabase, user), 5000)
-        console.log("[wishlist] ensureUserProfile:success", { userId: user.id })
-      } catch (error) {
-        console.error("[wishlist] ensureUserProfile:failed -> fallback local", {
-          userId: user.id,
-          message: error instanceof Error ? error.message : String(error),
-        })
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalWishlist()
-        setIsHydrating(false)
-        return
-      }
-
-      console.log("[wishlist] initialize -> supabase mode", { userId: user.id })
-      setStorageMode("supabase")
-      setCurrentUserId(user.id)
-      try {
-        await withTimeout(syncLocalToSupabase(user.id), 5000)
-        if (!isActive) return
-        await loadSupabaseWishlist(user.id)
-      } catch (error) {
-        console.error("[wishlist] initialize:syncOrLoad failed -> fallback local", {
-          userId: user.id,
-          message: error instanceof Error ? error.message : String(error),
-        })
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalWishlist()
-      } finally {
-        if (isActive) setIsHydrating(false)
-      }
-    }
-
-    initialize()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setIsHydrating(true)
-      const user = session?.user ?? null
-
-      if (!user) {
-        console.log("[wishlist] auth change -> local mode (signed out)")
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalWishlist()
-        setIsHydrating(false)
-        return
-      }
-
-      try {
-        await withTimeout(ensureUserProfile(supabase, user), 5000)
-        console.log("[wishlist] auth change ensureUserProfile:success", { userId: user.id })
-      } catch (error) {
-        console.error("[wishlist] auth change ensureUserProfile:failed -> fallback local", {
-          userId: user.id,
-          message: error instanceof Error ? error.message : String(error),
-        })
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalWishlist()
-        setIsHydrating(false)
-        return
-      }
-
-      console.log("[wishlist] auth change -> supabase mode", { userId: user.id })
-      setStorageMode("supabase")
-      setCurrentUserId(user.id)
-      try {
-        await withTimeout(syncLocalToSupabase(user.id), 5000)
-        await loadSupabaseWishlist(user.id)
-      } catch (error) {
-        console.error("[wishlist] auth change:syncOrLoad failed -> fallback local", {
-          userId: user.id,
-          message: error instanceof Error ? error.message : String(error),
-        })
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalWishlist()
-      } finally {
-        setIsHydrating(false)
-      }
-    })
-
-    return () => {
-      isActive = false
-      subscription.unsubscribe()
-    }
-  }, [loadLocalWishlist, loadSupabaseWishlist, supabase, syncLocalToSupabase])
+  const { activateLocalMode, currentUserId, isHydrating, storageMode } = useAuthSyncedStorage({
+    supabase,
+    scope: "wishlist",
+    loadLocal: loadLocalWishlist,
+    loadSupabase: loadSupabaseWishlist,
+    syncLocalToSupabase,
+  })
 
   useEffect(() => {
     if (storageMode === "local") {
@@ -280,8 +173,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
             userId: currentUserId,
             message: error instanceof Error ? error.message : String(error),
           })
-          setStorageMode("local")
-          setCurrentUserId(null)
+          activateLocalMode()
           addLocalWishlistItem(productId)
           console.log("[wishlist] addToWishlist:fallback local success", { productId })
         }

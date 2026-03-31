@@ -16,7 +16,7 @@ import {
   removeCartItem,
   updateCartItemQuantity,
 } from "@/features/cart/services"
-import { ensureUserProfile } from "@/features/users/services"
+import { useAuthSyncedStorage } from "@/components/providers/use-auth-synced-storage"
 import { withTimeout } from "@/lib/utils/with-timeout"
 
 export type CartEntry = {
@@ -99,9 +99,6 @@ const normalizeCartStorage = (raw: unknown): CartEntry[] => {
 export function CartProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createSupabaseClient(), [])
   const [entries, setEntries] = useState<CartEntry[]>([])
-  const [storageMode, setStorageMode] = useState<"local" | "supabase">("local")
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [isHydrating, setIsHydrating] = useState(true)
 
   const loadLocalCart = useCallback(() => {
     const saved = localStorage.getItem(LOCAL_CART_KEY)
@@ -181,115 +178,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [supabase],
   )
 
-  useEffect(() => {
-    let isActive = true
-
-    const initialize = async () => {
-      setIsHydrating(true)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!isActive) return
-
-      if (!user) {
-        console.log("[cart] initialize -> local mode (no user)")
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalCart()
-        setIsHydrating(false)
-        return
-      }
-
-      try {
-        await withTimeout(ensureUserProfile(supabase, user), 5000)
-        console.log("[cart] ensureUserProfile:success", { userId: user.id })
-      } catch (error) {
-        console.error("[cart] ensureUserProfile:failed -> fallback local", {
-          userId: user.id,
-          message: error instanceof Error ? error.message : String(error),
-        })
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalCart()
-        setIsHydrating(false)
-        return
-      }
-
-      console.log("[cart] initialize -> supabase mode", { userId: user.id })
-      setStorageMode("supabase")
-      setCurrentUserId(user.id)
-      try {
-        await syncLocalToSupabase(user.id)
-        await loadSupabaseCart(user.id)
-      } catch (error) {
-        console.error("[cart] initialize:syncOrLoad failed -> fallback local", {
-          userId: user.id,
-          message: error instanceof Error ? error.message : String(error),
-        })
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalCart()
-      } finally {
-        if (isActive) setIsHydrating(false)
-      }
-    }
-
-    initialize()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setIsHydrating(true)
-      const user = session?.user ?? null
-      if (!user) {
-        console.log("[cart] auth change -> local mode (signed out)")
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalCart()
-        setIsHydrating(false)
-        return
-      }
-
-      try {
-        await withTimeout(ensureUserProfile(supabase, user), 5000)
-        console.log("[cart] auth change ensureUserProfile:success", { userId: user.id })
-      } catch (error) {
-        console.error("[cart] auth change ensureUserProfile:failed -> fallback local", {
-          userId: user.id,
-          message: error instanceof Error ? error.message : String(error),
-        })
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalCart()
-        setIsHydrating(false)
-        return
-      }
-
-      console.log("[cart] auth change -> supabase mode", { userId: user.id })
-      setStorageMode("supabase")
-      setCurrentUserId(user.id)
-      try {
-        await withTimeout(syncLocalToSupabase(user.id), 5000)
-        await loadSupabaseCart(user.id)
-      } catch (error) {
-        console.error("[cart] auth change:syncOrLoad failed -> fallback local", {
-          userId: user.id,
-          message: error instanceof Error ? error.message : String(error),
-        })
-        setStorageMode("local")
-        setCurrentUserId(null)
-        loadLocalCart()
-      } finally {
-        setIsHydrating(false)
-      }
-    })
-
-    return () => {
-      isActive = false
-      subscription.unsubscribe()
-    }
-  }, [loadLocalCart, loadSupabaseCart, supabase, syncLocalToSupabase])
+  const { activateLocalMode, currentUserId, isHydrating, storageMode } = useAuthSyncedStorage({
+    supabase,
+    scope: "cart",
+    loadLocal: loadLocalCart,
+    loadSupabase: loadSupabaseCart,
+    syncLocalToSupabase,
+  })
 
   useEffect(() => {
     if (storageMode === "local") {
@@ -336,8 +231,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             userId: currentUserId,
             message: error instanceof Error ? error.message : String(error),
           })
-          setStorageMode("local")
-          setCurrentUserId(null)
+          activateLocalMode()
           addLocalEntry(productId, quantity, size)
           console.log("[cart] addToCart:fallback local success", { productId, quantity, size })
         }
@@ -347,7 +241,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       addLocalEntry(productId, quantity, size)
       console.log("[cart] addToCart:local success", { productId, quantity, size })
     },
-    [addLocalEntry, currentUserId, loadSupabaseCart, storageMode, supabase],
+    [activateLocalMode, addLocalEntry, currentUserId, loadSupabaseCart, storageMode, supabase],
   )
 
   const setQuantity = useCallback(
