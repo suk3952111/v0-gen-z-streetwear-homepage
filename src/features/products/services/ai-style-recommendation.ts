@@ -352,6 +352,84 @@ const inferProductGarmentTags = (product: ShopProductItem) => {
   return inferred;
 };
 
+type ProductFamily = "tops" | "outer" | "bottoms" | "accessories" | "unknown";
+
+const inferProductFamily = (product: ShopProductItem): ProductFamily => {
+  const categoryTokens = getCategoryTokens(product);
+  const inferredTags = inferProductGarmentTags(product);
+
+  if (categoryTokens.has("acc") || inferredTags.has("accessory") || inferredTags.has("shoes")) {
+    return "accessories";
+  }
+
+  if (categoryTokens.has("outer") || inferredTags.has("jacket")) {
+    return "outer";
+  }
+
+  if (categoryTokens.has("bottoms") || inferredTags.has("pants")) {
+    return "bottoms";
+  }
+
+  if (
+    categoryTokens.has("tops") ||
+    categoryTokens.has("hoodies") ||
+    inferredTags.has("hoodie") ||
+    inferredTags.has("tshirt") ||
+    inferredTags.has("shirt") ||
+    inferredTags.has("tank") ||
+    inferredTags.has("top") ||
+    inferredTags.has("crewneck") ||
+    inferredTags.has("jersey")
+  ) {
+    return "tops";
+  }
+
+  return "unknown";
+};
+
+const inferAnalysisFamily = (analysis: ImageStyleAnalysis): ProductFamily => {
+  const tokens = new Set([
+    ...tokenizeText(analysis.caption),
+    ...tokenizeText(analysis.garmentType),
+    ...analysis.styleTags.flatMap((tag) => tokenizeText(tag)),
+    ...analysis.details.flatMap((detail) => tokenizeText(detail)),
+  ]);
+
+  if (
+    ["bag", "backpack", "cap", "hat", "beanie", "wallet", "scarf", "mask", "necklace", "accessory", "shoe", "sneaker", "glove", "gloves"].some(
+      (token) => tokens.has(token),
+    )
+  ) {
+    return "accessories";
+  }
+
+  if (
+    ["jacket", "coat", "parka", "windbreaker", "bomber", "outer", "shell"].some((token) =>
+      tokens.has(token),
+    )
+  ) {
+    return "outer";
+  }
+
+  if (
+    ["pants", "jogger", "joggers", "shorts", "skirt", "denim", "trousers", "bottoms"].some((token) =>
+      tokens.has(token),
+    )
+  ) {
+    return "bottoms";
+  }
+
+  if (
+    ["hoodie", "shirt", "tee", "tshirt", "top", "tops", "tank", "jersey", "crewneck", "sweater", "longsleeve"].some((token) =>
+      tokens.has(token),
+    )
+  ) {
+    return "tops";
+  }
+
+  return "unknown";
+};
+
 const scoreProductByAnalysis = (
   product: ShopProductItem,
   analysis: ImageStyleAnalysis,
@@ -376,6 +454,8 @@ const scoreProductByAnalysis = (
     getSpecificGarmentGroup(product.name) ??
     getSpecificGarmentGroup(product.category.EN) ??
     getSpecificGarmentGroup(product.tags.join(" "));
+  const analysisFamily = inferAnalysisFamily(analysis);
+  const productFamily = inferProductFamily(product);
   const isGarmentTopLike = [
     "shirt",
     "t-shirt",
@@ -399,6 +479,14 @@ const scoreProductByAnalysis = (
 
   if (analysisGroup && inferredGarmentTags.has(analysisGroup)) {
     score += 0.32;
+  }
+
+  if (analysisFamily !== "unknown" && productFamily !== "unknown") {
+    if (analysisFamily === productFamily) {
+      score += 0.46;
+    } else {
+      score -= 0.72;
+    }
   }
 
   const matchedKeywordCount = [...analysisKeywords].filter((token) =>
@@ -456,12 +544,31 @@ const scoreStoredAttributesAgainstAnalysis = (
   const storedGroup =
     getSpecificGarmentGroup(stored.garment_type ?? "") ??
     getSpecificGarmentGroup((stored.style_tags ?? []).join(" "));
+  const analysisFamily = inferAnalysisFamily(analysis);
+  const storedFamily = inferAnalysisFamily({
+    caption: stored.garment_type ?? "",
+    styleTags: stored.style_tags ?? [],
+    garmentType: stored.garment_type ?? "",
+    color: stored.color ?? "",
+    fit: stored.fit ?? "",
+    silhouette: stored.silhouette ?? "",
+    material: stored.material ?? "",
+    pattern: stored.pattern ?? "",
+    details: stored.details ?? [],
+  });
 
   if (stored.color && stored.color === analysis.color) score += 0.18;
-  if (stored.garment_type && stored.garment_type === analysis.garmentType) score += 0.42;
-  if (analysisGroup && storedGroup && analysisGroup === storedGroup) score += 0.34;
-  if (stored.fit && stored.fit === analysis.fit) score += 0.16;
-  if (stored.silhouette && stored.silhouette === analysis.silhouette) score += 0.16;
+  if (stored.garment_type && stored.garment_type === analysis.garmentType) score += 0.56;
+  if (analysisGroup && storedGroup && analysisGroup === storedGroup) score += 0.44;
+  if (analysisFamily !== "unknown" && storedFamily !== "unknown") {
+    if (analysisFamily === storedFamily) {
+      score += 0.52;
+    } else {
+      score -= 0.9;
+    }
+  }
+  if (stored.fit && stored.fit === analysis.fit) score += 0.2;
+  if (stored.silhouette && stored.silhouette === analysis.silhouette) score += 0.2;
   if (stored.material && stored.material === analysis.material) score += 0.1;
   if (stored.pattern && stored.pattern === analysis.pattern) score += 0.1;
 
@@ -476,7 +583,11 @@ const scoreStoredAttributesAgainstAnalysis = (
   score += Math.min(0.18, tagMatches * 0.06);
 
   if (analysisGroup && storedGroup && analysisGroup !== storedGroup) {
-    score -= 0.28;
+    score -= 0.42;
+  }
+
+  if (analysis.garmentType && stored.garment_type && analysis.garmentType !== stored.garment_type) {
+    score -= 0.24;
   }
 
   return score;
@@ -522,7 +633,7 @@ const rerankRowsWithStoredAttributes = async (
   return rows
     .map((row) => ({
       product_id: row.product_id,
-      similarity: Math.max(0, row.similarity + (attributeBoostByProductId.get(row.product_id) ?? 0)),
+      similarity: Math.max(0, row.similarity * 0.82 + (attributeBoostByProductId.get(row.product_id) ?? 0)),
     }))
     .sort((a, b) => b.similarity - a.similarity);
 };
