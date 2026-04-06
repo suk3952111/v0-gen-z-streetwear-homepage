@@ -353,6 +353,17 @@ const inferProductGarmentTags = (product: ShopProductItem) => {
 };
 
 type ProductFamily = "tops" | "outer" | "bottoms" | "accessories" | "unknown";
+type AccessorySubfamily =
+  | "headwear"
+  | "bag"
+  | "wallet"
+  | "necklace"
+  | "scarf"
+  | "mask"
+  | "key-holder"
+  | "eyewear"
+  | "gloves"
+  | "unknown";
 
 const inferProductFamily = (product: ShopProductItem): ProductFamily => {
   const categoryTokens = getCategoryTokens(product);
@@ -430,6 +441,68 @@ const inferAnalysisFamily = (analysis: ImageStyleAnalysis): ProductFamily => {
   return "unknown";
 };
 
+const inferAccessorySubfamilyFromTokens = (tokens: Set<string>): AccessorySubfamily => {
+  if (["cap", "hat", "beanie", "bucket"].some((token) => tokens.has(token))) {
+    return "headwear";
+  }
+
+  if (["bag", "backpack", "crossbody", "pouch"].some((token) => tokens.has(token))) {
+    return "bag";
+  }
+
+  if (["wallet", "cardholder"].some((token) => tokens.has(token))) {
+    return "wallet";
+  }
+
+  if (["necklace", "chain", "earring", "earrings"].some((token) => tokens.has(token))) {
+    return "necklace";
+  }
+
+  if (["scarf"].some((token) => tokens.has(token))) {
+    return "scarf";
+  }
+
+  if (["mask"].some((token) => tokens.has(token))) {
+    return "mask";
+  }
+
+  if (["key", "holder", "keyholder"].some((token) => tokens.has(token))) {
+    return "key-holder";
+  }
+
+  if (["glove", "gloves"].some((token) => tokens.has(token))) {
+    return "gloves";
+  }
+
+  if (["sunglasses", "glasses", "eyewear"].some((token) => tokens.has(token))) {
+    return "eyewear";
+  }
+
+  return "unknown";
+};
+
+const inferProductAccessorySubfamily = (product: ShopProductItem): AccessorySubfamily => {
+  const tokens = new Set([
+    ...tokenizeText(product.name),
+    ...tokenizeText(product.category.EN),
+    ...tokenizeText(product.category.KR),
+    ...product.tags.flatMap((tag) => tokenizeText(tag)),
+  ]);
+
+  return inferAccessorySubfamilyFromTokens(tokens);
+};
+
+const inferAnalysisAccessorySubfamily = (analysis: ImageStyleAnalysis): AccessorySubfamily => {
+  const tokens = new Set([
+    ...tokenizeText(analysis.caption),
+    ...tokenizeText(analysis.garmentType),
+    ...analysis.styleTags.flatMap((tag) => tokenizeText(tag)),
+    ...analysis.details.flatMap((detail) => tokenizeText(detail)),
+  ]);
+
+  return inferAccessorySubfamilyFromTokens(tokens);
+};
+
 const scoreProductByAnalysis = (
   product: ShopProductItem,
   analysis: ImageStyleAnalysis,
@@ -456,6 +529,10 @@ const scoreProductByAnalysis = (
     getSpecificGarmentGroup(product.tags.join(" "));
   const analysisFamily = inferAnalysisFamily(analysis);
   const productFamily = inferProductFamily(product);
+  const analysisAccessorySubfamily =
+    analysisFamily === "accessories" ? inferAnalysisAccessorySubfamily(analysis) : "unknown";
+  const productAccessorySubfamily =
+    productFamily === "accessories" ? inferProductAccessorySubfamily(product) : "unknown";
   const isGarmentTopLike = [
     "shirt",
     "t-shirt",
@@ -486,6 +563,14 @@ const scoreProductByAnalysis = (
       score += 0.46;
     } else {
       score -= 0.72;
+    }
+  }
+
+  if (analysisAccessorySubfamily !== "unknown" && productAccessorySubfamily !== "unknown") {
+    if (analysisAccessorySubfamily === productAccessorySubfamily) {
+      score += 0.54;
+    } else {
+      score -= 0.88;
     }
   }
 
@@ -556,6 +641,22 @@ const scoreStoredAttributesAgainstAnalysis = (
     pattern: stored.pattern ?? "",
     details: stored.details ?? [],
   });
+  const analysisAccessorySubfamily =
+    analysisFamily === "accessories" ? inferAnalysisAccessorySubfamily(analysis) : "unknown";
+  const storedAccessorySubfamily =
+    storedFamily === "accessories"
+      ? inferAnalysisAccessorySubfamily({
+          caption: stored.garment_type ?? "",
+          styleTags: stored.style_tags ?? [],
+          garmentType: stored.garment_type ?? "",
+          color: stored.color ?? "",
+          fit: stored.fit ?? "",
+          silhouette: stored.silhouette ?? "",
+          material: stored.material ?? "",
+          pattern: stored.pattern ?? "",
+          details: stored.details ?? [],
+        })
+      : "unknown";
 
   if (stored.color && stored.color === analysis.color) score += 0.18;
   if (stored.garment_type && stored.garment_type === analysis.garmentType) score += 0.56;
@@ -565,6 +666,13 @@ const scoreStoredAttributesAgainstAnalysis = (
       score += 0.52;
     } else {
       score -= 0.9;
+    }
+  }
+  if (analysisAccessorySubfamily !== "unknown" && storedAccessorySubfamily !== "unknown") {
+    if (analysisAccessorySubfamily === storedAccessorySubfamily) {
+      score += 0.62;
+    } else {
+      score -= 1.05;
     }
   }
   if (stored.fit && stored.fit === analysis.fit) score += 0.2;

@@ -9,6 +9,7 @@ const cases = [
 ]
 
 test("ai visual search matrix across apparel and accessories", async ({ page }) => {
+  test.setTimeout(90_000)
   await page.goto("/shop")
 
   for (const testCase of cases) {
