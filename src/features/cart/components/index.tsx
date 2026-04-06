@@ -7,15 +7,16 @@ import Script from "next/script"
 import { useRouter } from "next/navigation"
 import { Minus, Plus, Sparkles, X } from "lucide-react"
 import { APP_URLS } from "@/constants/url"
-import { vibeCategories } from "@/mocks/cart"
 import { useI18n } from "@/lib/i18n/use-i18n"
 import { formatProductPriceByLocale } from "@/lib/format/currency"
 import { formatDateByLocale } from "@/lib/format/date"
 import { NoiseOverlay } from "@/components/ui"
 import { useCart } from "@/components/providers/cart-provider"
 import { createSupabaseClient } from "@/lib/supabase/client"
+import { loadCartAiInsightsAction } from "@/features/cart/actions/load-cart-ai-insights"
 import { getProductsBySlugs } from "@/features/products/services/get-products-by-slugs"
 import { createCheckoutOrderAction } from "@/features/cart/actions/create-checkout-order"
+import type { CartAiInsights } from "@/features/cart/services/get-cart-ai-insights"
 import type { ShopProductItem } from "@/features/products/types/shop"
 
 type CartItemViewModel = {
@@ -28,6 +29,10 @@ type CartItemViewModel = {
   quantity: number
   image: string
   vibeTag: string
+}
+
+function SkeletonBlock({ className }: { className: string }) {
+  return <div className={`animate-pulse bg-[#1a1a1a] ${className}`} />
 }
 
 type TossPaymentRequest = {
@@ -69,6 +74,8 @@ export function CartView() {
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [aiInsights, setAiInsights] = useState<CartAiInsights | null>(null)
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false)
 
   useEffect(() => {
     if (typeof window !== "undefined" && typeof window.TossPayments === "function") {
@@ -142,6 +149,41 @@ export function CartView() {
       })
       .filter((item): item is CartItemViewModel => item !== null)
   }, [entries, productById])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadAiInsights = async () => {
+      if (isHydrating || isLoadingProducts) {
+        setIsLoadingInsights(false)
+        return
+      }
+
+      if (items.length === 0) {
+        setAiInsights(null)
+        setIsLoadingInsights(false)
+        return
+      }
+
+      setIsLoadingInsights(true)
+      const response = await loadCartAiInsightsAction({
+        locale,
+        items: items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+      })
+
+      if (cancelled) return
+      setAiInsights(response.success ? response.data : null)
+      setIsLoadingInsights(false)
+    }
+
+    void loadAiInsights()
+    return () => {
+      cancelled = true
+    }
+  }, [isHydrating, isLoadingProducts, items, locale])
 
   const updateQuantity = async (id: string, delta: number) => {
     const current = entries.find((entry) => entry.key === id)
@@ -347,111 +389,202 @@ export function CartView() {
                     <Sparkles className="h-6 w-6 text-[#CCFF00]" />
                     <h3 className="text-xl font-bold uppercase tracking-wider text-[#CCFF00]">{t("aiAnalyzer")}</h3>
                   </div>
-                  <p className="mb-4 text-sm uppercase tracking-wider text-[#888888]">{t("vibeScore")}</p>
-                  <div className="space-y-4">
-                    {vibeCategories.map((vibe) => (
-                      <div key={vibe.name}>
-                        <div className="mb-2 flex justify-between">
-                          <span className="text-sm font-bold uppercase text-white">{vibe.name}</span>
-                          <span className="font-bold text-white">{vibe.percentage}%</span>
-                        </div>
-                        <div className="h-3 border border-[#333333] bg-[#1a1a1a]">
-                          <div
-                            className="h-full transition-all duration-500"
-                            style={{
-                              width: `${vibe.percentage}%`,
-                              backgroundColor: vibe.color,
-                              boxShadow: `0 0 10px ${vibe.color}`,
-                            }}
-                          />
-                        </div>
+                  <p className="mb-2 text-sm uppercase tracking-wider text-[#888888]">{t("vibeScore")}</p>
+                  <p className="mb-5 text-sm leading-relaxed text-[#666666]">{t("aiSupporting")}</p>
+
+                  {isLoadingInsights ? (
+                    <div className="space-y-5">
+                      <div className="flex items-center gap-3">
+                        <div className="h-3 w-3 animate-pulse rounded-full bg-[#CCFF00]" />
+                        <p className="text-sm uppercase tracking-wider text-[#888888]">{t("aiLoading")}</p>
                       </div>
-                    ))}
-                  </div>
+                      <div className="space-y-3">
+                        <SkeletonBlock className="h-8 w-full max-w-[540px]" />
+                        <SkeletonBlock className="h-4 w-full max-w-[620px]" />
+                        <SkeletonBlock className="h-4 w-full max-w-[420px]" />
+                      </div>
+                      <div className="space-y-4 pt-2">
+                        {Array.from({ length: 3 }).map((_, index) => (
+                          <div key={index}>
+                            <div className="mb-2 flex items-center justify-between gap-4">
+                              <SkeletonBlock className="h-4 w-28" />
+                              <SkeletonBlock className="h-4 w-12" />
+                            </div>
+                            <SkeletonBlock className="h-3 w-full border border-[#333333]" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : aiInsights ? (
+                    <div>
+                      <p className="text-2xl font-bold leading-tight text-white">{aiInsights.headline}</p>
+                      <p className="mt-3 text-sm leading-relaxed text-[#cfcfcf]">{aiInsights.supportingLine}</p>
+
+                      {aiInsights.signals.length > 0 && (
+                        <div className="mt-6 space-y-4">
+                          {aiInsights.signals.map((signal) => (
+                            <div key={signal.label}>
+                              <div className="mb-2 flex items-center justify-between gap-4">
+                                <span className="text-sm font-bold uppercase text-white">{signal.label}</span>
+                                <span className="text-sm font-bold" style={{ color: signal.color }}>
+                                  {signal.score}%
+                                </span>
+                              </div>
+                              <div className="h-3 border border-[#333333] bg-[#1a1a1a]">
+                                <div
+                                  className="h-full transition-all duration-500"
+                                  style={{
+                                    width: `${signal.score}%`,
+                                    backgroundColor: signal.color,
+                                    boxShadow: `0 0 10px ${signal.color}`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm uppercase tracking-wider text-[#888888]">{t("aiFallback")}</p>
+                  )}
                 </div>
               </div>
 
               <div className="lg:col-span-1">
-                <div className="sticky top-24 border-4 border-[#CCFF00] bg-[#0a0a0a]">
-                  <div className="border-b-4 border-dashed border-[#CCFF00] p-6 text-center">
-                    <h2 className="text-3xl font-bold tracking-tighter text-[#CCFF00]">VIBE CHECK</h2>
-                    <p className="mt-2 text-xs uppercase tracking-[0.3em] text-[#888888]">STREETWEAR RECEIPT</p>
+                <div className="space-y-6">
+                  <div className="sticky top-24 border-4 border-[#CCFF00] bg-[#0a0a0a]">
+                    <div className="border-b-4 border-dashed border-[#CCFF00] p-6 text-center">
+                      <h2 className="text-3xl font-bold tracking-tighter text-[#CCFF00]">VIBE CHECK</h2>
+                      <p className="mt-2 text-xs uppercase tracking-[0.3em] text-[#888888]">STREETWEAR RECEIPT</p>
+                    </div>
+
+                    <div className="space-y-4 p-6 font-mono text-sm">
+                      <div className="flex justify-between text-[#888888]">
+                        <span>{t("orderNumber")}</span>
+                        <span className="text-white">{orderNumber}</span>
+                      </div>
+                      <div className="flex justify-between text-[#888888]">
+                        <span>{t("date")}</span>
+                        <span className="text-white">{currentDate}</span>
+                      </div>
+
+                      <div className="my-4 border-t border-dashed border-[#333333]" />
+
+                      <div className="space-y-2">
+                        <p className="uppercase text-[#888888]">{t("items")}</p>
+                        {items.map((item) => (
+                          <div key={item.id} className="flex justify-between text-xs text-white">
+                            <span className="max-w-[60%] truncate">
+                              {item.quantity}x {item.name}
+                            </span>
+                            <span>
+                              {formatProductPriceByLocale({
+                                locale,
+                                usd: item.priceUSD * item.quantity,
+                                krw: item.priceKRW * item.quantity,
+                              })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="my-4 border-t border-dashed border-[#333333]" />
+
+                      <div className="flex justify-between text-[#888888]">
+                        <span>{t("subtotal")}</span>
+                        <span className="text-white">
+                          {formatProductPriceByLocale({ locale, usd: subtotal, krw: subtotal })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-[#888888]">
+                        <span>{t("shipping")}</span>
+                        <span className="text-xs text-white">{t("shippingValue")}</span>
+                      </div>
+
+                      <div className="my-4 border-t-4 border-[#CCFF00]" />
+
+                      <div className="flex justify-between text-xl font-bold">
+                        <span className="text-white">{t("total")}</span>
+                        <span className="text-[#CCFF00]">
+                          {formatProductPriceByLocale({ locale, usd: subtotal, krw: subtotal })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 p-6 pt-0">
+                      <button
+                        onClick={() => void handleCheckout()}
+                        disabled={isCheckingOut || items.length === 0 || !isTossReady}
+                        className="w-full border-4 border-[#CCFF00] bg-[#CCFF00] py-4 text-xl font-bold uppercase tracking-wider text-[#0a0a0a] transition-colors hover:bg-[#0a0a0a] hover:text-[#CCFF00] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isCheckingOut ? t("paymentPreparing") : t("checkout")}
+                      </button>
+                      <Link
+                        href={APP_URLS.shop}
+                        className="block text-center text-sm uppercase tracking-wider text-[#888888] transition-colors hover:text-[#CCFF00]"
+                      >
+                        {t("continueShop")}
+                      </Link>
+                      <Link
+                        href={APP_URLS.account}
+                        className="block text-center text-sm uppercase tracking-wider text-[#888888] transition-colors hover:text-[#CCFF00]"
+                      >
+                        {t("viewOrders")}
+                      </Link>
+                    </div>
                   </div>
 
-                  <div className="space-y-4 p-6 font-mono text-sm">
-                    <div className="flex justify-between text-[#888888]">
-                      <span>{t("orderNumber")}</span>
-                      <span className="text-white">{orderNumber}</span>
+                  {aiInsights?.recommendations && aiInsights.recommendations.length > 0 && (
+                    <div className="border-4 border-[#CCFF00] bg-[#0a0a0a] p-6">
+                      <h3 className="text-xl font-bold uppercase tracking-wider text-[#CCFF00]">
+                        {t("aiRecommendations")}
+                      </h3>
+                      <div className="mt-5 space-y-4">
+                        {aiInsights.recommendations.map((entry) => (
+                          <Link
+                            key={entry.product.id}
+                            href={`/product/${entry.product.id}`}
+                            className="block border-2 border-[#333333] p-4 transition-colors hover:border-[#CCFF00]"
+                          >
+                            <div className="flex gap-4">
+                              <div className="relative h-24 w-24 shrink-0 overflow-hidden border border-[#333333]">
+                                <Image
+                                  src={entry.product.image || "/placeholder.svg"}
+                                  alt={entry.product.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-3">
+                                  <p className="text-base font-bold uppercase leading-tight text-white">
+                                    {entry.product.name}
+                                  </p>
+                                  <span className="shrink-0 text-sm font-bold text-[#CCFF00]">
+                                    {entry.matchScore}%
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-sm leading-relaxed text-[#bdbdbd]">{entry.reason}</p>
+                                <div className="mt-3 flex items-center justify-between gap-4">
+                                  <p className="text-xs uppercase tracking-wider text-[#888888]">
+                                    {t("aiMatchScore")}
+                                  </p>
+                                  <p className="text-sm font-bold text-white">
+                                    {formatProductPriceByLocale({
+                                      locale,
+                                      usd: entry.product.priceUSD,
+                                      krw: entry.product.priceKRW,
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex justify-between text-[#888888]">
-                      <span>{t("date")}</span>
-                      <span className="text-white">{currentDate}</span>
-                    </div>
-
-                    <div className="my-4 border-t border-dashed border-[#333333]" />
-
-                    <div className="space-y-2">
-                      <p className="uppercase text-[#888888]">{t("items")}</p>
-                      {items.map((item) => (
-                        <div key={item.id} className="flex justify-between text-xs text-white">
-                          <span className="max-w-[60%] truncate">
-                            {item.quantity}x {item.name}
-                          </span>
-                          <span>
-                            {formatProductPriceByLocale({
-                              locale,
-                              usd: item.priceUSD * item.quantity,
-                              krw: item.priceKRW * item.quantity,
-                            })}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="my-4 border-t border-dashed border-[#333333]" />
-
-                    <div className="flex justify-between text-[#888888]">
-                      <span>{t("subtotal")}</span>
-                      <span className="text-white">
-                        {formatProductPriceByLocale({ locale, usd: subtotal, krw: subtotal })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-[#888888]">
-                      <span>{t("shipping")}</span>
-                      <span className="text-xs text-white">{t("shippingValue")}</span>
-                    </div>
-
-                    <div className="my-4 border-t-4 border-[#CCFF00]" />
-
-                    <div className="flex justify-between text-xl font-bold">
-                      <span className="text-white">{t("total")}</span>
-                      <span className="text-[#CCFF00]">
-                        {formatProductPriceByLocale({ locale, usd: subtotal, krw: subtotal })}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 p-6 pt-0">
-                    <button
-                      onClick={() => void handleCheckout()}
-                      disabled={isCheckingOut || items.length === 0 || !isTossReady}
-                      className="w-full border-4 border-[#CCFF00] bg-[#CCFF00] py-4 text-xl font-bold uppercase tracking-wider text-[#0a0a0a] transition-colors hover:bg-[#0a0a0a] hover:text-[#CCFF00] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isCheckingOut ? t("paymentPreparing") : t("checkout")}
-                    </button>
-                    <Link
-                      href={APP_URLS.shop}
-                      className="block text-center text-sm uppercase tracking-wider text-[#888888] transition-colors hover:text-[#CCFF00]"
-                    >
-                      {t("continueShop")}
-                    </Link>
-                    <Link
-                      href={APP_URLS.account}
-                      className="block text-center text-sm uppercase tracking-wider text-[#888888] transition-colors hover:text-[#CCFF00]"
-                    >
-                      {t("viewOrders")}
-                    </Link>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

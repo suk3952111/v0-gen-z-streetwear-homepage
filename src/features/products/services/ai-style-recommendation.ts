@@ -5,6 +5,8 @@ import { getProductsBySlugs } from "@/features/products/services/get-products-by
 import { loadShopProductsPage } from "@/features/products/services/load-shop-products-page";
 import { getProductsByIdsQueryBuilder } from "@/features/products/query-builder/get-products-by-ids.builder";
 import { getProductsBySlugsQueryBuilder } from "@/features/products/query-builder/get-products-by-slugs.builder";
+import { getProductSearchTagRelationsByTagIdsQueryBuilder } from "@/features/products/query-builder/get-product-search-tag-relations-by-tag-ids.builder";
+import { getProductSearchTagsBySlugsQueryBuilder } from "@/features/products/query-builder/get-product-search-tags-by-slugs.builder";
 import { getProductTagRelationsByProductIdsQueryBuilder } from "@/features/products/query-builder/get-product-tag-relations-by-product-ids.builder";
 import { getProductTagRelationsByTagIdsQueryBuilder } from "@/features/products/query-builder/get-product-tag-relations-by-tag-ids.builder";
 import { getProductTagsBySlugsQueryBuilder } from "@/features/products/query-builder/get-product-tags-by-slugs.builder";
@@ -49,6 +51,11 @@ type ImageStyleAnalysis = {
   styleTags: string[];
   garmentType: string;
   color: string;
+  fit: string;
+  silhouette: string;
+  material: string;
+  pattern: string;
+  details: string[];
 };
 
 const GEMINI_IMAGE_MODEL = "gemini-2.5-flash";
@@ -57,6 +64,31 @@ const EMBEDDING_WEIGHT = 0.85;
 const TAG_WEIGHT = 0.15;
 const ENABLE_EMBEDDING_BACKFILL =
   process.env.ENABLE_EMBEDDING_BACKFILL === "true";
+const SUPPORTED_STYLE_TAGS = [
+  "cyber",
+  "gorpcore",
+  "minimal",
+  "neon",
+  "oversized",
+  "retro",
+  "street",
+  "techwear",
+  "utility",
+  "y2k",
+] as const;
+
+const STYLE_TAG_ALIASES: Record<(typeof SUPPORTED_STYLE_TAGS)[number], string[]> = {
+  cyber: ["cyber", "cyberpunk", "futuristic", "digital", "sci-fi"],
+  gorpcore: ["gorpcore", "outdoor", "trail", "hiking", "shell", "performance"],
+  minimal: ["minimal", "clean", "plain", "formal", "tailored", "sleek", "simple"],
+  neon: ["neon", "fluorescent", "bright", "electric"],
+  oversized: ["oversized", "baggy", "loose", "relaxed", "boxy"],
+  retro: ["retro", "vintage", "throwback", "old-school"],
+  street: ["street", "streetwear", "urban", "casual", "graphic"],
+  techwear: ["techwear", "technical", "tech", "tactical", "futurism"],
+  utility: ["utility", "functional", "cargo", "workwear", "multi-pocket"],
+  y2k: ["y2k", "2000s", "2000", "millennial"],
+};
 
 const parseJsonSafe = <T>(value: string, fallback: T): T => {
   try {
@@ -113,6 +145,63 @@ const normalizeTagSlug = (tag: string) => {
     .replace(/^-+|-+$/g, "");
 };
 
+const normalizeAnalysisStyleTags = (input: {
+  rawStyleTags: string[];
+  caption: string;
+  garmentType: string;
+  color: string;
+}) => {
+  const directMatches = new Set<string>();
+  const signalText = normalizeTagSlug(
+    [
+      input.caption,
+      input.garmentType,
+      input.color,
+      ...input.rawStyleTags,
+    ].join(" "),
+  );
+
+  input.rawStyleTags
+    .map(normalizeTagSlug)
+    .filter(Boolean)
+    .forEach((tag) => {
+      if (SUPPORTED_STYLE_TAGS.includes(tag as (typeof SUPPORTED_STYLE_TAGS)[number])) {
+        directMatches.add(tag);
+      }
+    });
+
+  const scoredMatches = SUPPORTED_STYLE_TAGS.map((tag) => {
+    const aliases = [tag, ...STYLE_TAG_ALIASES[tag]].map(normalizeTagSlug);
+    const score = aliases.reduce((total, alias) => {
+      if (!alias) return total;
+      if (directMatches.has(alias)) return total + 4;
+      if (signalText.includes(alias)) return total + (alias === tag ? 3 : 1);
+      return total;
+    }, 0);
+
+    return { tag, score };
+  })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => entry.tag);
+
+  return [...new Set([...directMatches, ...scoredMatches])].slice(0, 4);
+};
+
+const normalizeShortText = (value: string) => value.trim().toLowerCase();
+
+const normalizeDetailList = (values: string[]) =>
+  [...new Set(values.map(normalizeShortText).filter((value) => value.length > 0))].slice(0, 8);
+
+const isMissingSearchTagTableError = (message: string) => {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("does not exist") &&
+    (normalized.includes("product_search_tags") ||
+      normalized.includes("product_search_tag_relations"))
+  );
+};
+
 const tokenizeText = (value: string) => {
   return value
     .toLowerCase()
@@ -127,7 +216,12 @@ const buildAnalysisKeywords = (analysis: ImageStyleAnalysis) => {
     [
       analysis.color,
       analysis.garmentType,
+      analysis.fit,
+      analysis.silhouette,
+      analysis.material,
+      analysis.pattern,
       ...analysis.styleTags,
+      ...analysis.details,
       ...tokenizeText(analysis.caption),
     ]
       .flatMap((value) => tokenizeText(value))
@@ -335,6 +429,104 @@ const scoreProductByAnalysis = (
   return score;
 };
 
+type StoredImageAttributes = {
+  color?: string;
+  garment_type?: string;
+  fit?: string;
+  silhouette?: string;
+  material?: string;
+  pattern?: string;
+  details?: string[];
+  style_tags?: string[];
+};
+
+const parseStoredImageAttributes = (value: unknown): StoredImageAttributes | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as StoredImageAttributes;
+};
+
+const scoreStoredAttributesAgainstAnalysis = (
+  analysis: ImageStyleAnalysis,
+  stored: StoredImageAttributes,
+) => {
+  let score = 0;
+  const analysisGroup =
+    getSpecificGarmentGroup(analysis.garmentType) ??
+    getSpecificGarmentGroup(analysis.caption);
+  const storedGroup =
+    getSpecificGarmentGroup(stored.garment_type ?? "") ??
+    getSpecificGarmentGroup((stored.style_tags ?? []).join(" "));
+
+  if (stored.color && stored.color === analysis.color) score += 0.18;
+  if (stored.garment_type && stored.garment_type === analysis.garmentType) score += 0.42;
+  if (analysisGroup && storedGroup && analysisGroup === storedGroup) score += 0.34;
+  if (stored.fit && stored.fit === analysis.fit) score += 0.16;
+  if (stored.silhouette && stored.silhouette === analysis.silhouette) score += 0.16;
+  if (stored.material && stored.material === analysis.material) score += 0.1;
+  if (stored.pattern && stored.pattern === analysis.pattern) score += 0.1;
+
+  const storedDetails = normalizeDetailList(stored.details ?? []);
+  const detailMatches = normalizeDetailList(analysis.details).filter((detail) =>
+    storedDetails.includes(detail),
+  ).length;
+  score += Math.min(0.16, detailMatches * 0.06);
+
+  const storedTags = normalizeDetailList(stored.style_tags ?? []);
+  const tagMatches = analysis.styleTags.filter((tag) => storedTags.includes(tag)).length;
+  score += Math.min(0.18, tagMatches * 0.06);
+
+  if (analysisGroup && storedGroup && analysisGroup !== storedGroup) {
+    score -= 0.28;
+  }
+
+  return score;
+};
+
+const rerankRowsWithStoredAttributes = async (
+  supabaseClient: SupabaseClient<Database>,
+  rows: Array<{ product_id: string; similarity: number }>,
+  analysis: ImageStyleAnalysis,
+) => {
+  if (rows.length === 0) return rows;
+
+  const productIds = [...new Set(rows.map((row) => row.product_id))];
+  const { data, error } = await (supabaseClient as any)
+    .from("product_images")
+    .select("product_id, ai_attributes, is_primary, display_order")
+    .in("product_id", productIds);
+
+  if (error) {
+    return rows;
+  }
+
+  const imageRows = (data ?? []) as Array<{
+    product_id: string;
+    ai_attributes: unknown;
+    is_primary: boolean;
+    display_order: number;
+  }>;
+
+  const attributeBoostByProductId = new Map<string, number>();
+  imageRows.forEach((row) => {
+    const stored = parseStoredImageAttributes(row.ai_attributes);
+    if (!stored) return;
+
+    const score = scoreStoredAttributesAgainstAnalysis(analysis, stored);
+    const weighted = score + (row.is_primary ? 0.04 : 0) - Math.min(0.02, row.display_order * 0.002);
+    attributeBoostByProductId.set(
+      row.product_id,
+      Math.max(attributeBoostByProductId.get(row.product_id) ?? Number.NEGATIVE_INFINITY, weighted),
+    );
+  });
+
+  return rows
+    .map((row) => ({
+      product_id: row.product_id,
+      similarity: Math.max(0, row.similarity + (attributeBoostByProductId.get(row.product_id) ?? 0)),
+    }))
+    .sort((a, b) => b.similarity - a.similarity);
+};
+
 const callGeminiGenerate = async (parts: Array<Record<string, unknown>>) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -406,7 +598,7 @@ const analyzeImageStyle = async (
   const image = parseDataUrl(imageDataUrl);
   const content = await callGeminiGenerate([
     {
-      text: 'Analyze this fashion image and return JSON: {"caption":"short caption","color":"main color","garment_type":"specific clothing type","style_tags":["tag1","tag2","tag3"]}. The caption must briefly describe the clothing item, color, and type. color should be a short lowercase color word. garment_type should be a short lowercase clothing type like shirt, jacket, hoodie, pants, sneakers, bag. style_tags must be short lowercase words, max 8.',
+      text: `Analyze this fashion product image and return JSON: {"caption":"short caption","color":"main color","garment_type":"specific clothing type","fit":"fit word","silhouette":"silhouette word","material":"material word","pattern":"pattern word","details":["detail1","detail2"],"style_tags":["tag1","tag2","tag3"]}. Keep every value short and lowercase. caption must describe the item, color, and type briefly. garment_type should be like shirt, jacket, hoodie, pants, sneakers, bag. fit examples: slim, regular, relaxed, oversized. silhouette examples: cropped, boxy, straight, wide, tapered. material examples: cotton, denim, knit, nylon, fleece. pattern examples: solid, graphic, striped, washed, mesh. details should capture visible accents such as zipper, hood, cargo-pocket, drawstring, reflective, ribbed. style_tags must prefer this vocabulary only when relevant: ${SUPPORTED_STYLE_TAGS.join(", ")}. Do not invent unrelated tags. If none fit, return an empty array.`,
     },
     {
       inline_data: {
@@ -421,29 +613,50 @@ const analyzeImageStyle = async (
     style_tags?: string[];
     garment_type?: string;
     color?: string;
+    fit?: string;
+    silhouette?: string;
+    material?: string;
+    pattern?: string;
+    details?: string[];
   }>(
     extractJsonObject(content),
     {},
   );
   const caption = (parsed.caption ?? "").trim();
-  const styleTags = (parsed.style_tags ?? [])
+  const rawStyleTags = (parsed.style_tags ?? [])
     .map((tag) => tag.trim().toLowerCase())
     .filter((tag) => tag.length > 0)
     .slice(0, 8);
   const garmentType = (parsed.garment_type ?? "").trim().toLowerCase();
   const color = (parsed.color ?? "").trim().toLowerCase();
+  const fit = normalizeShortText(parsed.fit ?? "");
+  const silhouette = normalizeShortText(parsed.silhouette ?? "");
+  const material = normalizeShortText(parsed.material ?? "");
+  const pattern = normalizeShortText(parsed.pattern ?? "");
+  const details = normalizeDetailList(parsed.details ?? []);
   const fallbackCaption = [
-    styleTags.slice(0, 3).join(" "),
+    rawStyleTags.slice(0, 3).join(" "),
     "clothing item",
   ]
     .map((part) => part.trim())
     .find((part) => part.length > 0) ?? "clothing item";
+  const normalizedStyleTags = normalizeAnalysisStyleTags({
+    rawStyleTags,
+    caption: caption || fallbackCaption,
+    garmentType,
+    color,
+  });
 
   return {
     caption: caption || fallbackCaption,
-    styleTags,
+    styleTags: normalizedStyleTags,
     garmentType,
     color,
+    fit,
+    silhouette,
+    material,
+    pattern,
+    details,
   };
 };
 
@@ -487,6 +700,16 @@ const ensureProductImageCaptionEmbeddings = async (
           row.image_id,
           analysis.caption,
           embeddingLiteral,
+          {
+            color: analysis.color,
+            garment_type: analysis.garmentType,
+            fit: analysis.fit,
+            silhouette: analysis.silhouette,
+            material: analysis.material,
+            pattern: analysis.pattern,
+            details: analysis.details,
+            style_tags: analysis.styleTags,
+          },
         );
 
       if (updateError) {
@@ -583,44 +806,68 @@ const buildTagScoreByProductId = async (
     return new Map<string, number>();
   }
 
-  const { data: tagRowsData, error: tagRowsError } =
-    await getProductTagsBySlugsQueryBuilder(supabaseClient, tagSlugs);
-  if (tagRowsError) {
-    throw new Error(`Failed to load style tags: ${tagRowsError.message}`);
+  const buildScoreMap = async (source: "search" | "public") => {
+    const { data: tagRowsData, error: tagRowsError } =
+      source === "search"
+        ? await getProductSearchTagsBySlugsQueryBuilder(supabaseClient, tagSlugs)
+        : await getProductTagsBySlugsQueryBuilder(supabaseClient, tagSlugs);
+    if (tagRowsError) {
+      throw new Error(`Failed to load style tags: ${tagRowsError.message}`);
+    }
+
+    const tagRows = (tagRowsData ?? []) as Array<{ id: string }>;
+    if (tagRows.length === 0) {
+      return new Map<string, number>();
+    }
+
+    const tagIds = tagRows.map((tag) => tag.id);
+    const { data: relationsData, error: relationsError } =
+      source === "search"
+        ? await getProductSearchTagRelationsByTagIdsQueryBuilder(
+            supabaseClient,
+            tagIds,
+          )
+        : await getProductTagRelationsByTagIdsQueryBuilder(
+            supabaseClient,
+            tagIds,
+          );
+    if (relationsError) {
+      throw new Error(
+        `Failed to load product tag relations: ${relationsError.message}`,
+      );
+    }
+
+    const relations = (relationsData ?? []) as Array<{
+      product_id: string;
+      tag_id: string;
+    }>;
+    const countByProductId = new Map<string, number>();
+    relations.forEach((relation) => {
+      countByProductId.set(
+        relation.product_id,
+        (countByProductId.get(relation.product_id) ?? 0) + 1,
+      );
+    });
+
+    const totalTags = Math.max(1, tagRows.length);
+    const scoreByProductId = new Map<string, number>();
+    countByProductId.forEach((count, productId) => {
+      scoreByProductId.set(productId, Math.min(1, count / totalTags));
+    });
+    return scoreByProductId;
+  };
+
+  try {
+    return await buildScoreMap("search");
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      isMissingSearchTagTableError(error.message)
+    ) {
+      return buildScoreMap("public");
+    }
+    throw error;
   }
-
-  const tagRows = (tagRowsData ?? []) as Array<{ id: string }>;
-  if (tagRows.length === 0) {
-    return new Map<string, number>();
-  }
-
-  const tagIds = tagRows.map((tag) => tag.id);
-  const { data: relationsData, error: relationsError } =
-    await getProductTagRelationsByTagIdsQueryBuilder(supabaseClient, tagIds);
-  if (relationsError) {
-    throw new Error(
-      `Failed to load product tag relations: ${relationsError.message}`,
-    );
-  }
-
-  const relations = (relationsData ?? []) as Array<{
-    product_id: string;
-    tag_id: string;
-  }>;
-  const countByProductId = new Map<string, number>();
-  relations.forEach((relation) => {
-    countByProductId.set(
-      relation.product_id,
-      (countByProductId.get(relation.product_id) ?? 0) + 1,
-    );
-  });
-
-  const totalTags = Math.max(1, tagRows.length);
-  const scoreByProductId = new Map<string, number>();
-  countByProductId.forEach((count, productId) => {
-    scoreByProductId.set(productId, Math.min(1, count / totalTags));
-  });
-  return scoreByProductId;
 };
 
 const mergeEmbeddingAndTagScores = (
@@ -692,9 +939,13 @@ export const findStyleByImage = async (
     product_id: string;
     similarity: number;
   }>;
-  const rankedRows = mergeEmbeddingAndTagScores(
-    embeddingRows,
-    tagScoreByProductId,
+  const rankedRows = await rerankRowsWithStoredAttributes(
+    supabaseClient,
+    mergeEmbeddingAndTagScores(
+      embeddingRows,
+      tagScoreByProductId,
+    ),
+    analysis,
   );
 
   if (rankedRows.length === 0) {
