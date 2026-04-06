@@ -53,6 +53,10 @@ function generateGalleryImages(product: ShopProductItem): string[] {
   ]
 }
 
+function SkeletonBlock({ className }: { className: string }) {
+  return <div className={`animate-pulse bg-[#1a1a1a] ${className}`} />
+}
+
 export function ProductDetail({ language, productId, initialProduct }: ProductDetailProps) {
   const { locale, t } = useI18n("products.detail")
   const { addToCart } = useCart()
@@ -68,6 +72,7 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
   const [focusIndex, setFocusIndex] = useState(0)
   const [allFocusImages, setAllFocusImages] = useState<FocusImage[]>([])
   const [similarProducts, setSimilarProducts] = useState<ShopProductItem[]>([])
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false)
 
   const product = initialProduct
   const availableSizes = useMemo(() => {
@@ -97,12 +102,14 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
 
     const loadAiRecommendations = async () => {
       if (!product) return
+      setIsLoadingRecommendations(true)
       const response = await recommendSimilarStyleAction({
         productId: product.id,
         limit: 5,
       })
-      if (cancelled || !response.success) return
-      setSimilarProducts(response.data)
+      if (cancelled) return
+      setSimilarProducts(response.success ? response.data : [])
+      setIsLoadingRecommendations(false)
     }
 
     void loadAiRecommendations()
@@ -286,22 +293,43 @@ export function ProductDetail({ language, productId, initialProduct }: ProductDe
             className="flex min-w-full justify-start gap-6 px-4 pb-4 md:justify-center md:px-8"
             style={{ width: "max-content" }}
           >
-            {similarProducts.map((sp) => (
-              <Link key={sp.id} href={`/product/${sp.id}`} className="relative w-64 sm:w-72 flex-shrink-0 border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00] group cursor-pointer block">
-                <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]" style={{ animation: "badge-glow 2s ease-in-out infinite" }}>
-                  <Sparkles className="w-4 h-4" />
-                  <span className="text-sm font-bold">{sp.aiMatch}%</span>
+            {isLoadingRecommendations ? (
+              Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={`rec-skeleton-${index}`}
+                  className="relative w-64 sm:w-72 flex-shrink-0 border-4 border-[#333333] bg-[#0a0a0a] p-0"
+                >
+                  <div className="flex items-center gap-2 border-b border-[#222222] px-4 py-3">
+                    <div className="h-3 w-3 animate-pulse rounded-full bg-[#CCFF00]" />
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#888888]">
+                      {currentLanguage === "KR" ? "AI 추천 불러오는 중..." : "Loading AI picks..."}
+                    </p>
+                  </div>
+                  <SkeletonBlock className="aspect-square w-full" />
+                  <div className="space-y-3 border-t-4 border-[#333333] p-4">
+                    <SkeletonBlock className="h-6 w-4/5" />
+                    <SkeletonBlock className="h-5 w-24" />
+                  </div>
                 </div>
-                <div className="relative aspect-square overflow-hidden bg-[#1a1a1a]">
-                  <Image src={sp.image || "/placeholder.svg"} alt={sp.name} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
-                  <div className="absolute inset-0 bg-[#CCFF00] opacity-0 group-hover:opacity-10 transition-opacity" />
-                </div>
-                <div className="p-4 border-t-4 border-[#CCFF00]">
-                  <h3 className="text-white text-lg font-bold uppercase tracking-tight mb-2 truncate">{sp.name}</h3>
-                  <p className="text-[#CCFF00] text-xl font-bold">{formatPriceByCurrency(currentLanguage === "KR" ? sp.priceKRW : sp.priceUSD, currentLanguage === "KR" ? "KRW" : "USD")}</p>
-                </div>
-              </Link>
-            ))}
+              ))
+            ) : (
+              similarProducts.map((sp) => (
+                <Link key={sp.id} href={`/product/${sp.id}`} className="relative w-64 sm:w-72 flex-shrink-0 border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_#CCFF00] group cursor-pointer block">
+                  <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]" style={{ animation: "badge-glow 2s ease-in-out infinite" }}>
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-sm font-bold">{sp.aiMatch}%</span>
+                  </div>
+                  <div className="relative aspect-square overflow-hidden bg-[#1a1a1a]">
+                    <Image src={sp.image || "/placeholder.svg"} alt={sp.name} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-[#CCFF00] opacity-0 group-hover:opacity-10 transition-opacity" />
+                  </div>
+                  <div className="p-4 border-t-4 border-[#CCFF00]">
+                    <h3 className="text-white text-lg font-bold uppercase tracking-tight mb-2 truncate">{sp.name}</h3>
+                    <p className="text-[#CCFF00] text-xl font-bold">{formatPriceByCurrency(currentLanguage === "KR" ? sp.priceKRW : sp.priceUSD, currentLanguage === "KR" ? "KRW" : "USD")}</p>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </section>

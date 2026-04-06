@@ -28,6 +28,18 @@ export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProp
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { locale, t } = useI18n("products.visualSearch")
+  const bestMatchLabel = locale === "KR" ? "가장 비슷한 상품" : "BEST MATCHES"
+  const similarMoodLabel = locale === "KR" ? "비슷한 무드" : "SIMILAR MOOD"
+  const groupedResults = React.useMemo(() => {
+    const bestMatches = results.filter((product, index) => product.aiMatch >= 70 || index < 3)
+    const bestIds = new Set(bestMatches.map((product) => product.id))
+    const similarMood = results.filter((product) => !bestIds.has(product.id))
+
+    return {
+      bestMatches,
+      similarMood,
+    }
+  }, [results])
 
   const handleFileUpload = useCallback((file: File) => {
     if (file && file.type.startsWith("image/")) {
@@ -174,28 +186,68 @@ export function AIVisualSearchModal({ isOpen, onClose }: AIVisualSearchModalProp
                         {errorMessage}
                       </p>
                     ) : (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {results.map((product, index) => (
-                        <Link key={product.id} href={`/product/${product.id}`} onClick={onClose} className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_#CCFF00] cursor-pointer block" style={{ animation: `fade-in-result 0.4s ease-out ${index * 0.1}s both` }}>
-                          <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-1 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]" style={{ animation: "badge-glow 2s ease-in-out infinite" }}>
-                            <Sparkles className="w-3 h-3" />
-                            <span className="text-xs font-bold">{product.aiMatch}%</span>
-                          </div>
+                      <div className="space-y-8">
+                        {groupedResults.bestMatches.length > 0 && (
+                          <div>
+                            <p className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-[#CCFF00]">
+                              {bestMatchLabel}
+                            </p>
+                            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                              {groupedResults.bestMatches.map((product, index) => (
+                                <Link key={product.id} href={`/product/${product.id}`} onClick={onClose} className="group relative border-4 border-[#CCFF00] bg-[#0a0a0a] transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_#CCFF00] cursor-pointer block" style={{ animation: `fade-in-result 0.4s ease-out ${index * 0.1}s both` }}>
+                                  <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-1 bg-[#0a0a0a] border-2 border-[#CCFF00] text-[#CCFF00]" style={{ animation: "badge-glow 2s ease-in-out infinite" }}>
+                                    <Sparkles className="w-3 h-3" />
+                                    <span className="text-xs font-bold">{product.aiMatch}%</span>
+                                  </div>
 
-                          <div className="relative aspect-square overflow-hidden bg-[#1a1a1a]">
-                            <Image src={product.image || "/placeholder.svg"} alt={product.name} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
-                            <div className="absolute inset-0 bg-[#CCFF00] opacity-0 group-hover:opacity-10 transition-opacity" />
-                          </div>
+                                  <div className="relative aspect-square overflow-hidden bg-[#1a1a1a]">
+                                    <Image src={product.image || "/placeholder.svg"} alt={product.name} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
+                                    <div className="absolute inset-0 bg-[#CCFF00] opacity-0 group-hover:opacity-10 transition-opacity" />
+                                  </div>
 
-                          <div className="p-3 border-t-4 border-[#CCFF00]">
-                            <h4 className="text-white text-sm font-bold uppercase tracking-tight truncate mb-1">{product.name}</h4>
-                            <div className="flex items-center justify-between">
-                              <p className="text-[#CCFF00] font-bold">{formatPriceByCurrency(locale === "KR" ? product.priceKRW : product.priceUSD, locale === "KR" ? "KRW" : "USD")}</p>
-                              <span className="text-white/50 text-xs font-bold uppercase group-hover:text-[#CCFF00] transition-colors">{t("viewProduct")}</span>
+                                  <div className="p-3 border-t-4 border-[#CCFF00]">
+                                    <h4 className="text-white text-sm font-bold uppercase tracking-tight truncate mb-1">{product.name}</h4>
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-[#CCFF00] font-bold">{formatPriceByCurrency(locale === "KR" ? product.priceKRW : product.priceUSD, locale === "KR" ? "KRW" : "USD")}</p>
+                                      <span className="text-white/50 text-xs font-bold uppercase group-hover:text-[#CCFF00] transition-colors">{t("viewProduct")}</span>
+                                    </div>
+                                  </div>
+                                </Link>
+                              ))}
                             </div>
                           </div>
-                        </Link>
-                        ))}
+                        )}
+
+                        {groupedResults.similarMood.length > 0 && (
+                          <div>
+                            <p className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-white/60">
+                              {similarMoodLabel}
+                            </p>
+                            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                              {groupedResults.similarMood.map((product, index) => (
+                                <Link key={product.id} href={`/product/${product.id}`} onClick={onClose} className="group relative border-4 border-[#333333] bg-[#0a0a0a] transition-all hover:border-[#CCFF00] hover:translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_#CCFF00] cursor-pointer block" style={{ animation: `fade-in-result 0.4s ease-out ${index * 0.1}s both` }}>
+                                  <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-1 bg-[#0a0a0a] border-2 border-[#333333] text-white/80">
+                                    <Sparkles className="w-3 h-3" />
+                                    <span className="text-xs font-bold">{product.aiMatch}%</span>
+                                  </div>
+
+                                  <div className="relative aspect-square overflow-hidden bg-[#1a1a1a]">
+                                    <Image src={product.image || "/placeholder.svg"} alt={product.name} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
+                                    <div className="absolute inset-0 bg-[#CCFF00] opacity-0 group-hover:opacity-10 transition-opacity" />
+                                  </div>
+
+                                  <div className="p-3 border-t-4 border-[#333333] group-hover:border-[#CCFF00]">
+                                    <h4 className="text-white text-sm font-bold uppercase tracking-tight truncate mb-1">{product.name}</h4>
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-[#CCFF00] font-bold">{formatPriceByCurrency(locale === "KR" ? product.priceKRW : product.priceUSD, locale === "KR" ? "KRW" : "USD")}</p>
+                                      <span className="text-white/50 text-xs font-bold uppercase group-hover:text-[#CCFF00] transition-colors">{t("viewProduct")}</span>
+                                    </div>
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
